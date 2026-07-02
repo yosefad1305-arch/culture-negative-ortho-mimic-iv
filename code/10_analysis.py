@@ -182,35 +182,43 @@ chi2,pp,dof,v = cramers_v(ct)
 statsd["poly_by_inftype"] = dict(test="chi2", chi2=round(chi2,3), dof=int(dof), p=pp, cramers_v=round(v,4), table=ct.to_dict())
 
 # =====================================================================
-# AIM 3 — resistance (MRSA fraction among S. aureus; agent-level %R)
+# AIM 3 — resistance. Restricted to DEEP-MSK isolates for scope consistency with Aims 1-2
+# (reviewer 1, major concern 2). Agent-level %R is reported ORGANISM-STRATIFIED, not pooled
+# across all organisms (reviewer 1, major concern 1), for clinically meaningful organism-drug pairs.
 # =====================================================================
-p("Aim 3: resistance...")
-sa = sus[sus.is_saureus].copy()
-oxa = sa[sa.ab_name.str.upper().str.contains("OXACILLIN")]
-# per isolate (specimen,org) oxacillin result
-oxa_spec = oxa.groupby("micro_specimen_id").interpretation.agg(lambda s: "R" if (s=="R").any() else ("S" if (s=="S").any() else "I"))
-k = int((oxa_spec=="R").sum()); n = len(oxa_spec); r,lo,hi = ci_prop(k,n)
-results["aim3_resistance"] = {"mrsa_among_saureus": dict(mrsa=k, tested=n, frac=round(r,4), ci=[round(lo,4),round(hi,4)])}
-# MRSA by infection type
+p("Aim 3: resistance (deep-MSK, organism-stratified)...")
+sus_deep = sus[sus.is_deep_msk].copy()   # scope-consistent with organism spectrum
+sa = sus_deep[sus_deep.is_saureus].copy()
+def oxa_R_frac(df):
+    oxa = df[df.ab_name.str.upper().str.contains("OXACILLIN")]
+    # collapse to one interpretation per S. aureus isolate (specimen); resistant if any R
+    g = oxa.groupby("micro_specimen_id").interpretation.agg(lambda s: "R" if (s=="R").any() else ("I" if (s=="I").any() else "S"))
+    k=int((g=="R").sum()); n=len(g); r,lo,hi=ci_prop(k,n)
+    return dict(mrsa=k, tested=n, frac=round(r,4), ci=[round(lo,4),round(hi,4)])
+results["aim3_resistance"] = {"mrsa_among_saureus": oxa_R_frac(sa)}
 sa2 = sa.merge(ep[["hadm_id","infection_type"]].drop_duplicates(), on="hadm_id", how="left")
-mrsa_it={}
-for it in ["PJI","Osteomyelitis"]:
-    o = sa2[(sa2.infection_type==it) & (sa2.ab_name.str.upper().str.contains("OXACILLIN"))]
-    g = o.groupby("micro_specimen_id").interpretation.agg(lambda s: "R" if (s=="R").any() else "S")
-    k=int((g=="R").sum()); nn=len(g); rr,lo,hi=ci_prop(k,nn)
-    mrsa_it[it]=dict(mrsa=k,tested=nn,frac=round(rr,4),ci=[round(lo,4),round(hi,4)])
-results["aim3_resistance"]["mrsa_by_infection_type"]=mrsa_it
-# agent-level %R across key antibiotics (all organisms with a result)
-key_abx = ["VANCOMYCIN","OXACILLIN","CLINDAMYCIN","RIFAMPIN","LEVOFLOXACIN","CIPROFLOXACIN",
-           "GENTAMICIN","TRIMETHOPRIM/SULFA","CEFTRIAXONE","CEFAZOLIN","ERYTHROMYCIN","TETRACYCLINE"]
-agent_r={}
-for ab in key_abx:
-    d = sus[sus.ab_name.str.upper()==ab]
-    d = d[d.interpretation.isin(["R","S","I"])]
-    if len(d)==0: continue
-    k=int((d.interpretation=="R").sum()); n=len(d); r,lo,hi=ci_prop(k,n)
-    agent_r[ab]=dict(R=k,tested=n,pctR=round(r*100,1),ci=[round(lo*100,1),round(hi*100,1)])
-results["aim3_resistance"]["agent_percentR"]=agent_r
+results["aim3_resistance"]["mrsa_by_infection_type"] = {it: oxa_R_frac(sa2[sa2.infection_type==it]) for it in ["PJI","Osteomyelitis"]}
+
+# organism-stratified panels: each drug reported only among organisms for which it is clinically relevant
+def org_panel(org_filter, agents, label):
+    d0 = sus_deep[org_filter(sus_deep)]
+    panel={}
+    for ab in agents:
+        d = d0[d0.ab_name.str.upper()==ab]
+        d = d[d.interpretation.isin(["R","S","I"])]
+        if len(d)==0: continue
+        k=int((d.interpretation=="R").sum()); n=len(d); r,lo,hi=ci_prop(k,n)
+        panel[ab]=dict(R=k,tested=n,pctR=round(r*100,1),ci=[round(lo*100,1),round(hi*100,1)])
+    return panel
+GNB = lambda df: df.genus_group.isin(["Escherichia coli","Pseudomonas aeruginosa","Other gram-negative"])
+SA  = lambda df: df.is_saureus
+ENT = lambda df: df.genus_group=="Enterococcus"
+results["aim3_resistance"]["saureus_panel"] = org_panel(
+    SA, ["OXACILLIN","CEFAZOLIN","CLINDAMYCIN","ERYTHROMYCIN","LEVOFLOXACIN","TRIMETHOPRIM/SULFA","TETRACYCLINE","GENTAMICIN","RIFAMPIN","VANCOMYCIN"], "S. aureus")
+results["aim3_resistance"]["gramneg_panel"] = org_panel(
+    GNB, ["CEFTRIAXONE","CEFEPIME","CIPROFLOXACIN","LEVOFLOXACIN","GENTAMICIN","TOBRAMYCIN","MEROPENEM","PIPERACILLIN/TAZO","TRIMETHOPRIM/SULFA"], "Gram-negative")
+results["aim3_resistance"]["enterococcus_vancomycin"] = org_panel(
+    ENT, ["VANCOMYCIN","AMPICILLIN"], "Enterococcus")
 
 # =====================================================================
 # AIM 4 — diagnostic intensity
@@ -289,7 +297,8 @@ with open(os.path.join(OUT,"stats_digest.json"),"w") as f: json.dump(statsd,f,in
 
 # export a few CSV tables
 pd.DataFrame(gd).T.to_csv(os.path.join(TAB,"organism_genus_overall.csv"))
-pd.DataFrame(agent_r).T.to_csv(os.path.join(TAB,"resistance_agents.csv"))
+pd.DataFrame(results["aim3_resistance"]["saureus_panel"]).T.to_csv(os.path.join(TAB,"resistance_saureus_panel.csv"))
+pd.DataFrame(results["aim3_resistance"]["gramneg_panel"]).T.to_csv(os.path.join(TAB,"resistance_gramneg_panel.csv"))
 pd.DataFrame(reg_cn["terms"]).to_csv(os.path.join(TAB,"logit_culture_negative.csv"), index=False)
 pd.DataFrame(reg_poly["terms"]).to_csv(os.path.join(TAB,"logit_polymicrobial.csv"), index=False)
 
@@ -305,7 +314,11 @@ p(f"Top organisms (deep-msk):")
 for k,v in list(results['aim1_organism']['by_genus_group'].items())[:8]:
     p(f"   {k:38s} {v['pct']:5.1f}% (n={v['n']})")
 mr=results['aim3_resistance']['mrsa_among_saureus']
-p(f"MRSA among S. aureus: {mr['frac']:.1%} CI {mr['ci']} (n tested {mr['tested']})")
+p(f"MRSA among S. aureus (deep-MSK): {mr['frac']:.1%} CI {mr['ci']} (n tested {mr['tested']})")
+p("S. aureus panel %R:")
+for ab,v in results['aim3_resistance']['saureus_panel'].items(): p(f"   {ab:20s} {v['pctR']:5.1f}% (n={v['tested']})")
+p("Gram-negative panel %R:")
+for ab,v in results['aim3_resistance']['gramneg_panel'].items(): p(f"   {ab:20s} {v['pctR']:5.1f}% (n={v['tested']})")
 poly=results['aim1_polymicrobial']['overall']
 p(f"Polymicrobial episodes: {poly['frac']:.1%} CI {poly['ci']}")
 p(f"Diagnostic intensity (median specimens/episode): {results['aim4_intensity']['overall']['specimens_median']}")

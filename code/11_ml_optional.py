@@ -48,9 +48,15 @@ d=d.merge(labs, on="hadm_id", how="left")
 
 y=d.deep_culture_negative_episode.astype(int).values
 p(f"analytic n={len(d)}, culture-negative episodes={y.sum()} ({y.mean():.1%})")
+# marker missingness (reviewer 1, minor concern): report the fraction missing per lab
+miss={c: round(float(d[c].isna().mean()),3) for c in ["wbc_peak","crp_peak","esr_peak","albumin_first","neutro_pct_peak"]}
+p("marker missing fractions:", miss)
 
 # feature sets
-base_num=["anchor_age","female","n_deep_specimens","is_pji","has_tissue_bone","has_synovial","has_sonication"]
+# NOTE: n_deep_specimens is intentionally EXCLUDED. The outcome is "all deep specimens no growth",
+# so specimen count is mechanically anti-correlated with the outcome (more draws -> lower chance of
+# all-negative) and would inject definitional signal (reviewer 1, major concern 5).
+base_num=["anchor_age","female","is_pji","has_tissue_bone","has_synovial","has_sonication"]
 race_d=pd.get_dummies(d.race_group,prefix="race",drop_first=True).astype(float)
 ins_d=pd.get_dummies(d.ins_group,prefix="ins",drop_first=True).astype(float)
 X_base=pd.concat([d[base_num].astype(float).reset_index(drop=True),
@@ -108,9 +114,11 @@ res=dict(
   M1_context=dict(auroc=round(a1,3),auroc_ci=[round(ci1[0],3),round(ci1[1],3)],brier=round(b1,4),n_features=X_base.shape[1]),
   M2_with_labs=dict(auroc=round(a2,3),auroc_ci=[round(ci2[0],3),round(ci2[1],3)],brier=round(b2,4),n_features=X_full.shape[1]),
   paired_auroc_gain=dict(delta=round(dmean,4),ci=[round(dci[0],4),round(dci[1],4)],bootstrap_p=round(dp,4)),
+  marker_missing_fraction=miss,
   model_card=dict(library="scikit-learn", estimator="LogisticRegression(max_iter=2000)",
      preprocessing="median imputation + informative-missingness indicators + StandardScaler",
-     cv="5-fold stratified, out-of-fold predictions", seed=42,
+     cv="5-fold stratified, out-of-fold predictions", cv_seed=42, bootstrap_seed=20260702,
+     features_excluded="n_deep_specimens (definitionally tied to the outcome)",
      note="Measurement probe only; not externally validated; not a deployable clinical tool."))
 json.dump(res,open(os.path.join(OUT,"ml_digest.json"),"w"),indent=2)
 p("\n=== ML measurement probe ===")

@@ -19,11 +19,13 @@ def classify_spec(spec_type_desc):
         cat = "implant_sonication"
     elif "PROSTHETIC JOINT" in s or "JOINT FLUID" in s or "SYNOVIAL" in s:
         cat = "synovial_joint"
-    elif ("TISSUE" in s or "BIOPSY" in s or "BONE" in s or "FOOT CULTURE" in s):
+    elif ("TISSUE" in s or "BIOPSY" in s or "BONE" in s):
         cat = "deep_tissue_bone"
     elif "ABSCESS" in s or s in ("FLUID,OTHER", "FLUID, OTHER") or "FLUID RECEIVED IN" in s or s == "FLUID CULTURE":
         cat = "abscess_deep_fluid"
-    elif "SWAB" in s:
+    elif "SWAB" in s or "FOOT CULTURE" in s:
+        # FOOT CULTURE reclassified as superficial: MIMIC foot cultures are frequently superficial
+        # diabetic-foot specimens, not deep bone/tissue (reviewer 1, major concern 3).
         cat = "superficial_swab"
     elif "BLOOD CULTURE" in s:
         cat = "blood"

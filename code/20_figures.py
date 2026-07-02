@@ -82,24 +82,33 @@ def fig2():
     faint_grid(ax,"y"); ax.set_ylim(0,70); panel(ax,"b")
     fig.tight_layout(); save(fig,os.path.join(FIG,"Figure2_culture_negative"))
 
-# ---------------- Figure 3: resistance panel ----------------
-def fig3():
-    ar=R["aim3_resistance"]["agent_percentR"]
-    order=["VANCOMYCIN","RIFAMPIN","GENTAMICIN","TRIMETHOPRIM/SULFA","TETRACYCLINE","CEFTRIAXONE",
-           "CIPROFLOXACIN","LEVOFLOXACIN","CLINDAMYCIN","CEFAZOLIN","OXACILLIN","ERYTHROMYCIN"]
-    order=[a for a in order if a in ar]
-    fr=[ar[a]["pctR"] for a in order]; lo=[ar[a]["ci"][0] for a in order]; hi=[ar[a]["ci"][1] for a in order]
-    fig,ax=plt.subplots(figsize=(8.2,5.2))
+# ---------------- Figure 3: resistance panels (organism-stratified) ----------------
+def _panel(ax, panel, order, color, letter, title):
+    order=[a for a in order if a in panel]
+    fr=[panel[a]["pctR"] for a in order]; lo=[panel[a]["ci"][0] for a in order]; hi=[panel[a]["ci"][1] for a in order]
     y=np.arange(len(order))[::-1]
     err=[[f-l for f,l in zip(fr,lo)],[h-f for f,h in zip(fr,hi)]]
-    ax.barh(y,fr,color=SALMON,zorder=3,height=0.66,xerr=err,capsize=3,error_kw=dict(lw=0.9,ecolor=LABEL))
-    ax.set_yticks(y); ax.set_yticklabels([a.title().replace("Trimethoprim/Sulfa","TMP-SMX") for a in order])
+    ax.barh(y,fr,color=color,zorder=3,height=0.66,xerr=err,capsize=3,error_kw=dict(lw=0.9,ecolor=LABEL))
+    nice={"TRIMETHOPRIM/SULFA":"TMP-SMX","PIPERACILLIN/TAZO":"Pip-tazo"}
+    ax.set_yticks(y); ax.set_yticklabels([nice.get(a,a.title()) for a in order],fontsize=8.5)
     ax.set_xlabel("Isolates resistant (%)")
-    for yv,fv,a in zip(y,fr,order): ax.text(fv+1,yv,f"{fv:.0f}%",va="center",fontsize=8,color=LABEL)
+    for yv,fv,hv in zip(y,fr,hi): ax.text(hv+1.4,yv,f"{fv:.0f}",va="center",fontsize=7.5,color=LABEL)
+    faint_grid(ax,"x"); ax.set_xlim(0,max(hi+[10])*1.22); panel_lbl(ax,letter)
+
+def panel_lbl(ax,letter): panel(ax,letter)
+
+def fig3():
+    sa=R["aim3_resistance"]["saureus_panel"]; gn=R["aim3_resistance"]["gramneg_panel"]
+    fig,axes=plt.subplots(1,2,figsize=(11,5.0))
+    _panel(axes[0], sa, ["OXACILLIN","CEFAZOLIN","ERYTHROMYCIN","LEVOFLOXACIN","CLINDAMYCIN",
+                         "TETRACYCLINE","TRIMETHOPRIM/SULFA","RIFAMPIN","GENTAMICIN","VANCOMYCIN"],
+           SALMON, "a", "S. aureus")
+    _panel(axes[1], gn, ["CIPROFLOXACIN","TRIMETHOPRIM/SULFA","CEFTRIAXONE","LEVOFLOXACIN",
+                         "CEFEPIME","GENTAMICIN","PIPERACILLIN/TAZO","TOBRAMYCIN","MEROPENEM"],
+           BLUE, "b", "Gram-negative bacilli")
     mr=R["aim3_resistance"]["mrsa_among_saureus"]
-    ax.text(0.98,0.02,f"MRSA among S. aureus: {mr['frac']*100:.0f}% (95% CI {mr['ci'][0]*100:.0f}–{mr['ci'][1]*100:.0f}; n={mr['tested']})",
-            transform=ax.transAxes,ha="right",va="bottom",fontsize=8,color=MUTED)
-    faint_grid(ax,"x"); ax.set_xlim(0,max(fr)*1.18)
+    axes[0].text(0.98,0.02,f"MRSA: {mr['frac']*100:.0f}% (95% CI {mr['ci'][0]*100:.0f}-{mr['ci'][1]*100:.0f}; n={mr['tested']})",
+            transform=axes[0].transAxes,ha="right",va="bottom",fontsize=8,color=MUTED)
     fig.tight_layout(); save(fig,os.path.join(FIG,"Figure3_resistance"))
 
 # ---------------- Figure 4: yield by source + ML probe ----------------
