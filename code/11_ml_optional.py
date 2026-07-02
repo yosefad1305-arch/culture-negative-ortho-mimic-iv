@@ -88,6 +88,14 @@ def oof_probs(X):
 p("Cross-validating M1 (context) and M2 (+labs)...")
 oof1=oof_probs(X_base); oof2=oof_probs(X_full)
 
+# M2b: drop the highest-missingness markers (ESR 76%, albumin 57%); keep WBC/CRP/neutrophil.
+low_miss=["wbc_peak","crp_peak","neutro_pct_peak"]
+lab_lm=d[low_miss].astype(float).copy()
+for c in ["wbc_peak","crp_peak"]: lab_lm[c]=np.log1p(lab_lm[c])
+lab_lm["crp_peak_missing"]=d["crp_peak"].isna().astype(float).values
+X_lm=pd.concat([X_base.reset_index(drop=True), lab_lm.reset_index(drop=True)],axis=1)
+oof2b=oof_probs(X_lm)
+
 def boot_auc(oof,y,B=2000):
     aucs=[]
     idx=np.arange(len(y))
@@ -135,6 +143,9 @@ res=dict(
   paired_auroc_gain=dict(delta=round(dmean,4),ci=[round(dci[0],4),round(dci[1],4)],bootstrap_p=round(dp,4)),
   marker_missing_fraction=miss,
   complete_case=cc,
+  M2b_low_missingness_only=dict(auroc=round(roc_auc_score(y,oof2b),3),
+     auroc_ci=[round(x,3) for x in boot_auc(oof2b,y)],
+     note="M1 + WBC/CRP/neutrophil only (ESR 76% and albumin 57% missing dropped)"),
   model_card=dict(library="scikit-learn", estimator="LogisticRegression(max_iter=2000)",
      preprocessing="median imputation + informative-missingness indicators + StandardScaler",
      cv="5-fold stratified, out-of-fold predictions", cv_seed=42, bootstrap_seed=20260702,

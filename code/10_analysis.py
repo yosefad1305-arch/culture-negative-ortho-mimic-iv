@@ -156,6 +156,19 @@ for b in ["1","2-3","4-6","7+"]:
     d=dc2[dc2.nspec_band==b]; k=int(d.culture_negative.sum()); n=len(d); r,lo,hi=ci_prop(k,n)
     cn_by_count[b]=dict(neg=k,total=n,frac=round(r,4),ci=[round(lo,4),round(hi,4)])
 aim2["cn_by_specimen_count"]=cn_by_count
+
+# sensitivity: EXCLUDE the dual-coded (PJI + osteomyelitis) episodes entirely, rather than
+# assigning them to PJI by priority (reviewer request).
+cooccur = set(ep.loc[ep.cooccur_pji_osteo, "hadm_id"])
+dc_nx = dc[~dc.hadm_id.isin(cooccur)]
+k=int(dc_nx.culture_negative.sum()); n=len(dc_nx); r,lo,hi=ci_prop(k,n)
+aim2["cn_excluding_dualcoded"]=dict(neg=k,total=n,frac=round(r,4),ci=[round(lo,4),round(hi,4)],
+    n_episodes_excluded=int(len(cooccur)))
+# by infection type within the dual-code-excluded set
+aim2["cn_excl_dual_by_type"]={}
+for it in ["PJI","Osteomyelitis"]:
+    d=dc_nx[dc_nx.infection_type==it]; k=int(d.culture_negative.sum()); n=len(d); r,lo,hi=ci_prop(k,n)
+    aim2["cn_excl_dual_by_type"][it]=dict(neg=k,total=n,frac=round(r,4),ci=[round(lo,4),round(hi,4)])
 results["aim2_culture_negative"]=aim2
 
 # test: culture-negative vs infection type (PJI vs Osteo), specimen-level deep-msk

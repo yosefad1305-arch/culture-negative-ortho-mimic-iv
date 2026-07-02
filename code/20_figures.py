@@ -114,7 +114,8 @@ def fig3():
 # ---------------- Figure 4: yield by source + ML probe ----------------
 def fig4():
     yld=R["aim4_intensity"]["yield_by_source_category"]
-    cats=["deep_tissue_bone","synovial_joint","implant_sonication","abscess_deep_fluid","superficial_swab","blood"]
+    # superficial swab excluded: colonization/contamination-prone, not a deep-benchmark yield (reviewer)
+    cats=["deep_tissue_bone","synovial_joint","implant_sonication","abscess_deep_fluid","blood"]
     cats=[c for c in cats if c in yld]
     fig,axes=plt.subplots(1,2,figsize=(11,4.8))
     ax=axes[0]
@@ -123,7 +124,7 @@ def fig4():
     ax.barh(y,fr,color=BLUE,zorder=3,height=0.66,xerr=err,capsize=3,error_kw=dict(lw=0.9,ecolor=LABEL))
     ax.set_yticks(y); ax.set_yticklabels([CAT_LABEL[c].replace("\n"," ") for c in cats],fontsize=8.5)
     ax.set_xlabel("Culture-positive (%)"); faint_grid(ax,"x"); ax.set_xlim(0,100); panel(ax,"a")
-    for yv,fv in zip(y,fr): ax.text(fv+1.5,yv,f"{fv:.0f}%",va="center",fontsize=8,color=LABEL)
+    for yv,fv,hv in zip(y,fr,hi): ax.text(hv+1.8,yv,f"{fv:.0f}%",va="center",fontsize=8,color=LABEL)
     # ML probe: AUROC bars with CI
     ax=axes[1]
     labels=["Clinical context","+ Inflammatory labs"]
