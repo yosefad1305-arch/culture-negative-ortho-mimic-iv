@@ -129,6 +129,35 @@ for it in ["PJI","Osteomyelitis","Device (other)"]:
     r,lo,hi=ci_prop(k,n); aim2["episode_by_infection_type"][it]=dict(neg=k,total=n,frac=round(r,4),ci=[round(lo,4),round(hi,4)])
 results["aim2_culture_negative"] = aim2
 
+# cluster-robust CI for the headline specimen-level fraction: bootstrap over EPISODES (not specimens),
+# because specimens within an episode are correlated (reviewer 1, concern 1). 2000 resamples.
+rng = np.random.RandomState(20260702)
+ep_ids = dc.hadm_id.unique()
+by_ep = {h: g.culture_negative.values for h,g in dc.groupby("hadm_id")}
+fracs=[]
+for _ in range(2000):
+    samp = rng.choice(ep_ids, len(ep_ids), replace=True)
+    num=0; den=0
+    for h in samp:
+        v=by_ep[h]; num+=v.sum(); den+=len(v)
+    if den: fracs.append(num/den)
+cl_lo, cl_hi = np.percentile(fracs, [2.5, 97.5])
+aim2["specimen_deep_msk_overall"]["cluster_ci"] = [round(float(cl_lo),4), round(float(cl_hi),4)]
+aim2["specimen_deep_msk_overall"]["n_episodes"] = int(len(ep_ids))
+
+# specimen-count-stratified CN fraction: if CN rises with more specimens sampled, that is direct
+# evidence of a sampling-threshold (ascertainment) mechanism (reviewer 1/2, differential sampling).
+nspec = dc.groupby("hadm_id").size().rename("nspec")
+dc2 = dc.merge(nspec, on="hadm_id")
+def band(n): return "1" if n==1 else ("2-3" if n<=3 else ("4-6" if n<=6 else "7+"))
+dc2["nspec_band"]=dc2.nspec.map(band)
+cn_by_count={}
+for b in ["1","2-3","4-6","7+"]:
+    d=dc2[dc2.nspec_band==b]; k=int(d.culture_negative.sum()); n=len(d); r,lo,hi=ci_prop(k,n)
+    cn_by_count[b]=dict(neg=k,total=n,frac=round(r,4),ci=[round(lo,4),round(hi,4)])
+aim2["cn_by_specimen_count"]=cn_by_count
+results["aim2_culture_negative"]=aim2
+
 # test: culture-negative vs infection type (PJI vs Osteo), specimen-level deep-msk
 sub = dc[dc.infection_type.isin(["PJI","Osteomyelitis"])]
 ct = pd.crosstab(sub.infection_type, sub.culture_negative)
@@ -204,10 +233,13 @@ def org_panel(org_filter, agents, label):
     d0 = sus_deep[org_filter(sus_deep)]
     panel={}
     for ab in agents:
-        d = d0[d0.ab_name.str.upper()==ab]
-        d = d[d.interpretation.isin(["R","S","I"])]
+        d = d0[(d0.ab_name.str.upper()==ab) & (d0.interpretation.isin(["R","S","I"]))]
         if len(d)==0: continue
-        k=int((d.interpretation=="R").sum()); n=len(d); r,lo,hi=ci_prop(k,n)
+        # collapse to ONE result per isolate (specimen x organism) so denominators match the
+        # per-isolate MRSA computation and no isolate is double-counted (reviewer 1, concern 4).
+        g = d.groupby(["micro_specimen_id","org_name"]).interpretation.agg(
+            lambda s: "R" if (s=="R").any() else ("I" if (s=="I").any() else "S"))
+        k=int((g=="R").sum()); n=len(g); r,lo,hi=ci_prop(k,n)
         panel[ab]=dict(R=k,tested=n,pctR=round(r*100,1),ci=[round(lo*100,1),round(hi*100,1)])
     return panel
 GNB = lambda df: df.genus_group.isin(["Escherichia coli","Pseudomonas aeruginosa","Other gram-negative"])

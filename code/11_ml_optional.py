@@ -72,15 +72,18 @@ for c in ["wbc_peak","crp_peak","esr_peak"]:
     lab_df[c]=np.log1p(lab_df[c])
 X_full=pd.concat([X_base.reset_index(drop=True), lab_df.reset_index(drop=True)],axis=1)
 
-def oof_probs(X):
-    X=X.values
+def oof_probs_y(X, yv):
+    X=np.asarray(X)
     skf=StratifiedKFold(n_splits=5,shuffle=True,random_state=42)
-    oof=np.zeros(len(y))
-    for tr,te in skf.split(X,y):
+    oof=np.zeros(len(yv))
+    for tr,te in skf.split(X,yv):
         pipe=make_pipeline(SimpleImputer(strategy="median"),StandardScaler(),
                            LogisticRegression(max_iter=2000))
-        pipe.fit(X[tr],y[tr]); oof[te]=pipe.predict_proba(X[te])[:,1]
+        pipe.fit(X[tr],yv[tr]); oof[te]=pipe.predict_proba(X[te])[:,1]
     return oof
+
+def oof_probs(X):
+    return oof_probs_y(X.values, y)
 
 p("Cross-validating M1 (context) and M2 (+labs)...")
 oof1=oof_probs(X_base); oof2=oof_probs(X_full)
@@ -109,12 +112,29 @@ ci1=boot_auc(oof1,y); ci2=boot_auc(oof2,y)
 b1=brier_score_loss(y,oof1); b2=brier_score_loss(y,oof2)
 dmean,dci,dp=paired_boot(oof1,oof2,y)
 
+# complete-case sensitivity: does the lab increment survive when restricted to episodes with all
+# markers measured (i.e., not driven by informative-missingness indicators)? (reviewer 1, concern 3)
+cc_mask = d[lab_cols].notna().all(axis=1).values
+n_cc=int(cc_mask.sum())
+cc={}
+if n_cc>200 and len(np.unique(y[cc_mask]))>1:
+    Xb_cc=X_base[cc_mask].reset_index(drop=True)
+    # values-only labs (no missingness indicators) on complete cases
+    labv=d.loc[cc_mask, lab_cols].astype(float).copy()
+    for c in ["wbc_peak","crp_peak","esr_peak"]: labv[c]=np.log1p(labv[c])
+    Xf_cc=pd.concat([Xb_cc, labv.reset_index(drop=True)],axis=1)
+    ycc=y[cc_mask]
+    o1=oof_probs_y(Xb_cc,ycc); o2=oof_probs_y(Xf_cc,ycc)
+    cc=dict(n=n_cc, M1_auroc=round(roc_auc_score(ycc,o1),3), M2_auroc=round(roc_auc_score(ycc,o2),3),
+            delta=round(roc_auc_score(ycc,o2)-roc_auc_score(ycc,o1),4))
+
 res=dict(
   n=int(len(y)), n_positive=int(y.sum()), prevalence=round(float(y.mean()),4),
   M1_context=dict(auroc=round(a1,3),auroc_ci=[round(ci1[0],3),round(ci1[1],3)],brier=round(b1,4),n_features=X_base.shape[1]),
   M2_with_labs=dict(auroc=round(a2,3),auroc_ci=[round(ci2[0],3),round(ci2[1],3)],brier=round(b2,4),n_features=X_full.shape[1]),
   paired_auroc_gain=dict(delta=round(dmean,4),ci=[round(dci[0],4),round(dci[1],4)],bootstrap_p=round(dp,4)),
   marker_missing_fraction=miss,
+  complete_case=cc,
   model_card=dict(library="scikit-learn", estimator="LogisticRegression(max_iter=2000)",
      preprocessing="median imputation + informative-missingness indicators + StandardScaler",
      cv="5-fold stratified, out-of-fold predictions", cv_seed=42, bootstrap_seed=20260702,
