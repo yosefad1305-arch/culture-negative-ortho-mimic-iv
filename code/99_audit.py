@@ -33,40 +33,40 @@ def frac_ci(k,n,method="beta"):
 assert ep.hadm_id.is_unique
 n_ep=len(ep); check("total episodes", n_ep, "7697")
 by=ep.infection_type.value_counts().to_dict()
-check("PJI n", by["PJI"], "1555"); check("Osteo n", by["Osteomyelitis"], "5715"); check("Device n", by["Device (other)"], "427")
+check("PJI n", by["PJI"], "1089"); check("Osteo n", by["Osteomyelitis"], "5715"); check("Device n", by["Device (other)"], "893")
 check("median age", ep.anchor_age.median(), "60")
 
 # --- deep-culture analytic cohort ---
 dc=spec[spec.has_culture_test & spec.is_deep_msk]
 n_dc_ep=dc.hadm_id.nunique(); n_dc_spec=len(dc)
-check("deep-culture episodes", n_dc_ep, "3562")
-check("deep specimens", n_dc_spec, "7708")
+check("deep-culture episodes", n_dc_ep, "3560")
+check("deep specimens", n_dc_spec, "7700")
 # headline culture-negative
 k=int(dc.culture_negative.sum()); f,lo,hi=frac_ci(k,n_dc_spec)
 check("CN fraction", round(f*100,1), "35.7%")
-check("CN naive CI lo", round(lo*100,1), "34.7"); check("CN naive CI hi", round(hi*100,1), "36.8")
+check("CN naive CI lo", round(lo*100,1), "34.6"); check("CN naive CI hi", round(hi*100,1), "36.7")
 # by infection type
-for it,txt in [("PJI","47.1%"),("Osteomyelitis","26.8%")]:
+for it,txt in [("PJI","48.6%"),("Osteomyelitis","26.6%")]:
     d=dc[dc.infection_type==it]; kk=int(d.culture_negative.sum()); ff=kk/len(d)
     check(f"CN {it}", round(ff*100,1), txt)
 # by source
-for cat,txt in [("synovial_joint","54.8%"),("deep_tissue_bone","34.0%"),("implant_sonication","31.7%")]:
+for cat,txt in [("synovial_joint","54.8%"),("deep_tissue_bone","33.9%"),("implant_sonication","31.7%")]:
     d=dc[dc.source_category==cat]; ff=d.culture_negative.mean()
     check(f"CN {cat}", round(ff*100,1), txt)
 # episode-level CN
 epd=ep[ep.has_deep_specimen]
-f=epd.deep_culture_negative_episode.mean(); check("episode CN", round(f*100,1), "21.5%")
+f=epd.deep_culture_negative_episode.mean(); check("episode CN", round(f*100,1), "21.4%")
 # specimen-count gradient
 nspec=dc.groupby("hadm_id").size().rename("n"); dc2=dc.merge(nspec,on="hadm_id")
 def band(n): return "1" if n==1 else ("2-3" if n<=3 else ("4-6" if n<=6 else "7+"))
 dc2["b"]=dc2.n.map(band)
-for b,txt in [("1","24.5%"),("2-3","30.9%"),("4-6","44.4%"),("7+","50.7%")]:
+for b,txt in [("1","24.5%"),("2-3","30.8%"),("4-6","44.3%"),("7+","50.7%")]:
     ff=dc2[dc2.b==b].culture_negative.mean(); check(f"CN band {b}", round(ff*100,1), txt)
 # dual-code excluded
 cooccur=set(ep.loc[ep.cooccur_pji_osteo,"hadm_id"])
 dnx=dc[~dc.hadm_id.isin(cooccur)]; ff=dnx.culture_negative.mean()
-check("CN excl dual", round(ff*100,1), "35.3%")
-check("n dual-coded", len(cooccur), "263")
+check("CN excl dual", round(ff*100,1), "35.1%")
+check("n dual-coded", len(cooccur), "97 episodes")
 
 # --- organisms ---
 odm=org[org.is_deep_msk & org.is_species]
@@ -76,12 +76,12 @@ check("S aureus n", int(vc["Staphylococcus aureus"]), "2305")
 check("S aureus pct", round(vc["Staphylococcus aureus"]/n_iso*100,1), "32.5%")
 check("CoNS pct", round(vc["Coagulase-negative staphylococci"]/n_iso*100,1), "14.3%")
 # S aureus by type
-for it,txt in [("PJI","37.1%"),("Osteomyelitis","30.2%")]:
+for it,txt in [("PJI","36.4%"),("Osteomyelitis","30.2%")]:
     d=odm[odm.infection_type==it]; ff=(d.genus_group=="Staphylococcus aureus").mean()
     check(f"S aureus {it}", round(ff*100,1), txt)
 # polymicrobial
 epp=ep[ep.has_deep_specimen & (ep.n_deep_positive>0)]
-f=epp.episode_polymicrobial.mean(); check("polymicrobial", round(f*100,1), "41.6%")
+f=epp.episode_polymicrobial.mean(); check("polymicrobial", round(f*100,1), "42.7%")
 
 # --- resistance (deep, per-isolate) ---
 sus_d=sus[sus.is_deep_msk]

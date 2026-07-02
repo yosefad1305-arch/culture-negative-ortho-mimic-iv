@@ -19,8 +19,11 @@ os.makedirs(OUT, exist_ok=True)
 def p(*a): print(*a, flush=True)
 
 # ---------------------------------------------------------------- cohort (dx)
-PJI9, PJI10   = ("99666", "99667"), ("T845",)
-DEV10         = ("T846", "T847")            # other internal orthopedic device infection (sensitivity)
+# PJI = infection of an internal JOINT prosthesis only: ICD-9 996.66, ICD-10 T84.5x.
+# ICD-9 996.67 ("other internal orthopedic device") is the ICD-9 analogue of T84.6/T84.7 and belongs
+# in the other-device group, NOT PJI (adversarial-audit C2).
+PJI9, PJI10   = ("99666",), ("T845",)
+DEV9, DEV10   = ("99667",), ("T846", "T847")   # other internal orthopedic device infection
 OST9, OST10   = ("730",), ("M86",)
 
 p("Loading diagnoses_icd...")
@@ -36,7 +39,7 @@ def match(pre9, pre10):
     return m
 
 is_pji  = match(PJI9, PJI10)
-is_dev  = match((), DEV10)
+is_dev  = match(DEV9, DEV10)
 is_ost  = match(OST9, OST10)
 
 pji_h  = set(dx.loc[is_pji, "hadm_id"].unique())
@@ -109,7 +112,10 @@ p("Aggregating specimen-level...")
 def agg_spec(g):
     has_cult = bool(g.is_culture_test.any())
     real = g[g.is_organism]
-    species_set = sorted(set(real.loc[real.is_species, "species"].dropna()))
+    species_set = sorted(set(real.loc[real.is_species, "species"].dropna()))     # collapsed genus, for reporting
+    # polymicrobial distinctness on RAW org_name (true species), not the collapsed reporting label,
+    # so two distinct organisms sharing a coarse label are not scored as monomicrobial (audit C4).
+    orgname_set = sorted(set(real.loc[real.is_species, "org_name"].dropna()))
     any_growth = bool(len(real) > 0)
     return pd.Series({
         "hadm_id": g.hadm_id.iloc[0],
@@ -119,9 +125,10 @@ def agg_spec(g):
         "is_deep_ext": bool(g.is_deep_ext.any()),
         "has_culture_test": has_cult,
         "any_growth": any_growth,
-        "n_species": len(species_set),
+        "n_species": len(orgname_set),
         "species_list": "; ".join(species_set),
-        "polymicrobial": len(species_set) >= 2,
+        "orgname_list": "; ".join(orgname_set),
+        "polymicrobial": len(orgname_set) >= 2,
         "has_saureus": bool(real.is_saureus.any()),
         "has_lowres_only": bool(any_growth and len(species_set)==0),
         "charttime": g.charttime.dropna().iloc[0] if g.charttime.notna().any() else None,
@@ -158,10 +165,12 @@ deep = spec_c[spec_c.is_deep_msk]
 def agg_ep(h):
     sc = spec_c[spec_c.hadm_id==h]
     dd = deep[deep.hadm_id==h]
-    # organisms across deep-msk positive specimens
-    sp_all = set()
+    # organisms across deep-msk positive specimens: genus set (reporting) + raw org_name set (distinctness)
+    sp_all = set(); org_all = set()
     for lst in dd.loc[dd.culture_positive, "species_list"]:
-        sp_all |= set([x for x in lst.split("; ") if x])
+        sp_all |= set(x for x in lst.split("; ") if x)
+    for lst in dd.loc[dd.culture_positive, "orgname_list"]:
+        org_all |= set(x for x in lst.split("; ") if x)
     n_deep = len(dd)
     n_deep_pos = int(dd.culture_positive.sum())
     return dict(
@@ -173,8 +182,8 @@ def agg_ep(h):
         n_deep_positive=n_deep_pos,
         deep_culture_negative_episode=(n_deep>0 and n_deep_pos==0),   # all deep specimens negative
         episode_species=sorted(sp_all),
-        n_episode_species=len(sp_all),
-        episode_polymicrobial=len(sp_all)>=2,
+        n_episode_species=len(org_all),
+        episode_polymicrobial=len(org_all)>=2,   # distinct raw organisms (audit C4)
         has_saureus=bool(dd.has_saureus.any()),
     )
 ep_rows = [agg_ep(h) for h in adm.hadm_id.unique()]

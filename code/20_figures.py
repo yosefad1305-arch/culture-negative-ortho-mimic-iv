@@ -130,12 +130,15 @@ def fig4():
     labels=["Clinical\ncontext","+ Inflammatory\nlabs"]
     au=[M["M1_context"]["auroc"],M["M2_with_labs"]["auroc"]]; ci=[M["M1_context"]["auroc_ci"],M["M2_with_labs"]["auroc_ci"]]
     x=np.arange(2)
-    ax.bar(x,au,color=[GREY,NEJM_BLUE],width=0.55,zorder=3,yerr=err_from(au,[c[0] for c in ci],[c[1] for c in ci]),
-           capsize=5,error_kw=dict(lw=1,ecolor=LABEL))
-    ax.axhline(0.5,ls="--",lw=0.8,color="#9CA3AF",zorder=2)
+    # dot-with-CI (not bars): bar length on a truncated AUROC axis exaggerates a near-null difference
+    ax.errorbar(x,au,yerr=err_from(au,[c[0] for c in ci],[c[1] for c in ci]),fmt="o",ms=8,
+                mfc=NEJM_BLUE,mec="white",mew=1.2,color=LABEL,ecolor=LABEL,elinewidth=1.2,capsize=5,zorder=3)
+    ax.plot(x,au,color=NEJM_LTBLUE,lw=1,zorder=2)
+    ax.axhline(0.5,ls="--",lw=0.9,color="#9CA3AF",zorder=1)
+    ax.text(1.98,0.505,"chance",ha="right",va="bottom",fontsize=7.5,color=MUTED)
     ax.set_xticks(x); ax.set_xticklabels(labels,fontsize=8.5); ax.set_ylabel("Out-of-fold AUROC")
-    ax.set_ylim(0.45,0.75)
-    for xv,av,c in zip(x,au,ci): ax.text(xv,c[1]+0.008,f"{av:.3f}",ha="center",fontsize=9,color=LABEL)
+    ax.set_ylim(0.45,0.75); ax.set_xlim(-0.5,1.6)
+    for xv,av,c in zip(x,au,ci): ax.text(xv+0.06,av,f"{av:.3f}",ha="left",va="center",fontsize=9,color=LABEL)
     ax.text(0.5,0.02,f"Δ = {M['paired_auroc_gain']['delta']:+.3f} (95% CI {M['paired_auroc_gain']['ci'][0]:+.3f} to {M['paired_auroc_gain']['ci'][1]:+.3f})",
             transform=ax.transAxes,ha="center",va="bottom",fontsize=8,color=MUTED)
     panel(ax,"B")

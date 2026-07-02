@@ -13,7 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, StratifiedGroupKFold
 from sklearn.metrics import roc_auc_score, brier_score_loss
 
 PROJ=r"C:\Users\Owner\ortho-mimic-study"; INT=os.path.join(PROJ,"output","intermediate"); OUT=os.path.join(PROJ,"output")
@@ -72,18 +72,23 @@ for c in ["wbc_peak","crp_peak","esr_peak"]:
     lab_df[c]=np.log1p(lab_df[c])
 X_full=pd.concat([X_base.reset_index(drop=True), lab_df.reset_index(drop=True)],axis=1)
 
-def oof_probs_y(X, yv):
+def oof_probs_y(X, yv, groups=None):
     X=np.asarray(X)
-    skf=StratifiedKFold(n_splits=5,shuffle=True,random_state=42)
+    # StratifiedGroupKFold on subject_id so a patient's episodes never split across folds (audit J1).
+    if groups is not None:
+        skf=StratifiedGroupKFold(n_splits=5,shuffle=True,random_state=42)
+        splits=skf.split(X,yv,groups)
+    else:
+        skf=StratifiedKFold(n_splits=5,shuffle=True,random_state=42); splits=skf.split(X,yv)
     oof=np.zeros(len(yv))
-    for tr,te in skf.split(X,yv):
+    for tr,te in splits:
         pipe=make_pipeline(SimpleImputer(strategy="median"),StandardScaler(),
                            LogisticRegression(max_iter=2000))
         pipe.fit(X[tr],yv[tr]); oof[te]=pipe.predict_proba(X[te])[:,1]
     return oof
 
 def oof_probs(X):
-    return oof_probs_y(X.values, y)
+    return oof_probs_y(X.values, y, groups=d.subject_id.values)
 
 p("Cross-validating M1 (context) and M2 (+labs)...")
 oof1=oof_probs(X_base); oof2=oof_probs(X_full)
@@ -132,7 +137,8 @@ if n_cc>200 and len(np.unique(y[cc_mask]))>1:
     for c in ["wbc_peak","crp_peak","esr_peak"]: labv[c]=np.log1p(labv[c])
     Xf_cc=pd.concat([Xb_cc, labv.reset_index(drop=True)],axis=1)
     ycc=y[cc_mask]
-    o1=oof_probs_y(Xb_cc,ycc); o2=oof_probs_y(Xf_cc,ycc)
+    g_cc=d.loc[cc_mask,"subject_id"].values
+    o1=oof_probs_y(Xb_cc.values,ycc,groups=g_cc); o2=oof_probs_y(Xf_cc.values,ycc,groups=g_cc)
     cc=dict(n=n_cc, M1_auroc=round(roc_auc_score(ycc,o1),3), M2_auroc=round(roc_auc_score(ycc,o2),3),
             delta=round(roc_auc_score(ycc,o2)-roc_auc_score(ycc,o1),4))
 

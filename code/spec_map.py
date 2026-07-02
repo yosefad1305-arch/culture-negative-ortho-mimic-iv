@@ -19,6 +19,8 @@ def classify_spec(spec_type_desc):
         cat = "implant_sonication"
     elif "PROSTHETIC JOINT" in s or "JOINT FLUID" in s or "SYNOVIAL" in s:
         cat = "synovial_joint"
+    elif "MARROW" in s:
+        cat = "other"                      # bone marrow is not a musculoskeletal-infection specimen
     elif ("TISSUE" in s or "BIOPSY" in s or "BONE" in s):
         cat = "deep_tissue_bone"
     elif "ABSCESS" in s or s in ("FLUID,OTHER", "FLUID, OTHER") or "FLUID RECEIVED IN" in s or s == "FLUID CULTURE":

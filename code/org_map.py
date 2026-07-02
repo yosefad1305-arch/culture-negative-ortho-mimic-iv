@@ -99,7 +99,11 @@ def classify(org_name):
     # --- Anaerobes (override) ---
     if any(k in o for k in _ANAEROBE):
         if "CUTIBACTERIUM" in o or "PROPIONIBACTERIUM" in o:
+            # broken out as its own reporting group (archetypal culture-negative-PJI organism),
+            # while remaining in the anaerobe broad group.
             sp = "Cutibacterium acnes" if "ACNES" in o else "Cutibacterium/Propionibacterium spp."
+            r.update(species=sp, genus_group="Cutibacterium (Propionibacterium)", broad_group="Anaerobe")
+            return r
         elif "BACTEROIDES" in o: sp = "Bacteroides spp."
         elif "CLOSTRIDIUM" in o: sp = "Clostridium spp."
         elif "PREVOTELLA" in o: sp = "Prevotella spp."

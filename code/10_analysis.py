@@ -27,7 +27,7 @@ org  = pd.read_parquet(os.path.join(INT,"organisms.parquet"))
 sus  = pd.read_parquet(os.path.join(INT,"susceptibilities.parquet"))
 
 # infection type for main contrast: PJI vs Osteomyelitis (device-other kept as 3rd descriptive group)
-spec = spec.merge(ep[["hadm_id","infection_type"]], on="hadm_id", how="left")
+spec = spec.merge(ep[["hadm_id","infection_type","subject_id"]], on="hadm_id", how="left")
 org  = org.merge(ep[["hadm_id","infection_type"]], on="hadm_id", how="left")
 
 def ci_prop(k, n):
@@ -129,21 +129,23 @@ for it in ["PJI","Osteomyelitis","Device (other)"]:
     r,lo,hi=ci_prop(k,n); aim2["episode_by_infection_type"][it]=dict(neg=k,total=n,frac=round(r,4),ci=[round(lo,4),round(hi,4)])
 results["aim2_culture_negative"] = aim2
 
-# cluster-robust CI for the headline specimen-level fraction: bootstrap over EPISODES (not specimens),
-# because specimens within an episode are correlated (reviewer 1, concern 1). 2000 resamples.
+# cluster-robust CI for the headline specimen-level fraction: bootstrap over PATIENTS (subject_id),
+# because both specimens within an episode AND episodes within a patient are correlated (recurrent
+# infection; audit J1). Resampling patients is the most conservative unit. 2000 resamples.
 rng = np.random.RandomState(20260702)
-ep_ids = dc.hadm_id.unique()
-by_ep = {h: g.culture_negative.values for h,g in dc.groupby("hadm_id")}
+subj_ids = dc.subject_id.dropna().unique()
+by_subj = {s: g.culture_negative.values for s,g in dc.groupby("subject_id")}
 fracs=[]
 for _ in range(2000):
-    samp = rng.choice(ep_ids, len(ep_ids), replace=True)
+    samp = rng.choice(subj_ids, len(subj_ids), replace=True)
     num=0; den=0
-    for h in samp:
-        v=by_ep[h]; num+=v.sum(); den+=len(v)
+    for s in samp:
+        v=by_subj[s]; num+=v.sum(); den+=len(v)
     if den: fracs.append(num/den)
 cl_lo, cl_hi = np.percentile(fracs, [2.5, 97.5])
 aim2["specimen_deep_msk_overall"]["cluster_ci"] = [round(float(cl_lo),4), round(float(cl_hi),4)]
-aim2["specimen_deep_msk_overall"]["n_episodes"] = int(len(ep_ids))
+aim2["specimen_deep_msk_overall"]["n_episodes"] = int(dc.hadm_id.nunique())
+aim2["specimen_deep_msk_overall"]["n_patients"] = int(len(subj_ids))
 
 # specimen-count-stratified CN fraction: if CN rises with more specimens sampled, that is direct
 # evidence of a sampling-threshold (ascertainment) mechanism (reviewer 1/2, differential sampling).
@@ -307,27 +309,30 @@ def run_logit(df, outcome, name):
                                    categories=["Osteomyelitis/other","PJI"])
     d["y"]=d[outcome].astype(int)
     f = f"y ~ C(age_band) + female + C(race_group) + C(insurance_group) + C(inftype2)"
-    m = smf.logit(f, data=d).fit(disp=0)
+    # cluster-robust (sandwich) SEs on subject_id, because a patient can contribute several episodes
+    # (recurrent infection; audit J1).
+    m = smf.logit(f, data=d).fit(disp=0, cov_type="cluster", cov_kwds={"groups": d["subject_id"]})
     out=[]
-    conf=m.conf_int();
+    conf=m.conf_int()
     for term in m.params.index:
         if term=="Intercept": continue
         out.append(dict(term=term, OR=round(float(np.exp(m.params[term])),3),
                         ci=[round(float(np.exp(conf.loc[term,0])),3), round(float(np.exp(conf.loc[term,1])),3)],
                         p=float(m.pvalues[term])))
-    return dict(name=name, n=int(m.nobs), outcome=outcome, terms=out, pseudo_r2=round(float(m.prsquared),4))
+    return dict(name=name, n=int(m.nobs), n_patients=int(d["subject_id"].nunique()),
+                outcome=outcome, terms=out, pseudo_r2=round(float(m.prsquared),4))
 
 reg_cn = run_logit(ep[ep.has_deep_specimen], "deep_culture_negative_episode", "culture_negative_episode")
 reg_poly = run_logit(ep[ep.has_deep_specimen & (ep.n_deep_positive>0)], "episode_polymicrobial", "polymicrobial_episode")
+# Benjamini-Hochberg across BOTH variation models' covariate families (audit C7), applied per model.
+for reg in (reg_cn, reg_poly):
+    pvals=[t["p"] for t in reg["terms"]]
+    rej,padj,_,_=multipletests(pvals, alpha=0.05, method="fdr_bh")
+    for t,pa,rj in zip(reg["terms"],padj,rej):
+        t["p_bh"]=float(pa); t["sig_bh"]=bool(rj)
 statsd["aim5_logit_culture_negative"]=reg_cn
 statsd["aim5_logit_polymicrobial"]=reg_poly
-
-# BH correction across the Aim-5 primary family (all covariate p-values from the culture-negative model)
-pvals=[t["p"] for t in reg_cn["terms"]]
-rej,padj,_,_=multipletests(pvals, alpha=0.05, method="fdr_bh")
-for t,pa,rj in zip(reg_cn["terms"],padj,rej):
-    t["p_bh"]=float(pa); t["sig_bh"]=bool(rj)
-statsd["aim5_bh_family"]="culture_negative_episode covariates"
+statsd["aim5_bh_family"]="each variation model's covariate set (Benjamini-Hochberg within model)"
 
 # =====================================================================
 # save
