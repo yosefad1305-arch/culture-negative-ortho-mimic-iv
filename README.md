@@ -2,7 +2,7 @@
 
 Code to reproduce the analyses in:
 
-> [Author list]. Microbiology and the culture-negative fraction of code-defined orthopedic infections: an open, reproducible benchmark from MIMIC-IV. Under review.
+> Adiniaev Y, Gorenshtein A, Timor TM, Klang E, Geftler A. Microbiology and the culture-negative fraction of code-defined orthopedic infections: an open, reproducible benchmark from MIMIC-IV. Under review.
 
 ## Overview
 
