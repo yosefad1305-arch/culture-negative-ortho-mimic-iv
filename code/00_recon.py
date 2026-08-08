@@ -13,8 +13,7 @@ import gzip
 import pandas as pd
 import numpy as np
 
-ROOT = r"C:\Users\Owner\OneDrive\Desktop\researches\mimic-iv-3.1"
-PROJ = r"C:\Users\Owner\ortho-mimic-study"
+from paths import ROOT, PROJ, hosp, icu  # noqa: F401
 OUT = os.path.join(PROJ, "output", "intermediate")
 os.makedirs(OUT, exist_ok=True)
 

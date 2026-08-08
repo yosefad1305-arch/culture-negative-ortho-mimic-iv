@@ -13,26 +13,48 @@ credentialed and cannot be redistributed. No patient-level data are included in 
 
 ## Local layout expected by the code
 
-Place the decompressed module folders so the paths resolve as below, then set the `ROOT` variable at the
-top of each script to the dataset root:
+Place the decompressed module folders so the paths resolve as below:
 
 ```
-<ROOT>/
+<MIMIC_ROOT>/
 ├── hosp/
 │   ├── admissions.csv.gz
 │   ├── patients.csv.gz
 │   ├── diagnoses_icd.csv.gz
-│   ├── procedures_icd.csv.gz
 │   ├── microbiologyevents.csv.gz
-│   ├── labevents.csv.gz
-│   ├── d_icd_diagnoses.csv.gz
-│   └── d_labitems.csv.gz
+│   └── d_icd_diagnoses.csv.gz
 └── icu/
     └── icustays.csv.gz
 ```
 
-The large tables (`microbiologyevents`, `labevents`) are streamed in chunks and filtered to the cohort,
-so the full database can be processed on a workstation without loading whole tables into memory.
+## Telling the code where the data is
+
+Paths are resolved once, in `code/paths.py`. No analysis script hard-codes a location. Set two
+environment variables:
+
+```bash
+export MIMIC_ROOT=/path/to/mimic-iv-3.1     # the folder containing hosp/ and icu/
+export PROJ_ROOT=/path/to/outputs           # where output/ will be created
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:MIMIC_ROOT = "C:\path\to\mimic-iv-3.1"
+$env:PROJ_ROOT  = "C:\path\to\outputs"
+```
+
+Alternatively, edit `DEFAULT_MIMIC_ROOT` and `DEFAULT_PROJ_ROOT` in `code/paths.py`. To check that
+the code can see the data before running anything:
+
+```bash
+python code/paths.py
+```
+
+`microbiologyevents` is streamed in chunks and filtered to the cohort, so the database can be
+processed on a workstation without loading whole tables into memory. The cohort-filtered subset is
+cached to `output/intermediate/micro_raw_cohort.parquet` on the first run and reused afterwards;
+delete it to force a re-read.
 
 ## What is safe to commit
 

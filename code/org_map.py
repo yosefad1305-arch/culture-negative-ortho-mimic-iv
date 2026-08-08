@@ -16,6 +16,26 @@ import re
 def _norm(s):
     return re.sub(r"\s+", " ", str(s).strip().upper())
 
+
+# Laboratory strings sometimes name an organism in order to EXCLUDE it, for example
+# "NON-FERMENTER, NOT PSEUDOMONAS AERUGINOSA" or "BACILLUS SPECIES; NOT ANTHRACIS". Plain
+# substring matching reads those as the named organism, which is the opposite of what the
+# laboratory reported. Taxonomic matching therefore runs on the string with negated clauses
+# removed, while the full string is retained for reporting.
+# "NON" is deliberately absent: "NON-FERMENTER" is an identity, not a negated organism name.
+_NEGATION = re.compile(r"\b(?:NOT|EXCEPT|OTHER THAN|RULE[SD]? OUT)\b")
+
+
+def _affirmative(o):
+    """Return the part of the string that asserts an identity, dropping negated clauses."""
+    m = _NEGATION.search(o)
+    if not m:
+        return o
+    head = o[:m.start()].strip(" ,;.-")
+    # If the negation is the whole string there is nothing affirmative to match on; fall back to
+    # the original so the record is still classified rather than silently dropped.
+    return head if head else o
+
 # administrative / non-organism (not real bacterial/fungal growth)
 _NONORG_EXACT = {"CANCELLED", "POSITIVE", "NEGATIVE", "VIRUS", "MOLD"}
 _VIRAL = ("HERPES", "CYTOMEGALOVIRUS", "VARICELLA", "ADENOVIRUS", "INFLUENZA",
@@ -53,13 +73,16 @@ _GNB = ("ESCHERICHIA", "KLEBSIELLA", "PROTEUS", "ENTEROBACTER", "SERRATIA", "CIT
         "CAMPYLOBACTER", "GARDNERELLA", "NON-FERMENTER", "GRAM NEGATIVE ROD")
 
 def classify(org_name):
-    o = _norm(org_name)
+    raw = _norm(org_name)
+    # Taxonomic matching runs on the affirmative part only, so an organism named in order to be
+    # excluded is never read as the organism present.
+    o = _affirmative(raw)
     r = dict(species=None, genus_group=None, broad_group="Other", is_organism=True,
              is_species_level=True, is_low_resolution=False, is_non_organism=False,
              is_staph_aureus=False)
 
     # --- non-organism / administrative ---
-    if o in _NONORG_EXACT or any(v in o for v in _VIRAL) or o.startswith("POSITIVE FOR") and any(v in o for v in _VIRAL):
+    if raw in _NONORG_EXACT or any(v in o for v in _VIRAL) or o.startswith("POSITIVE FOR") and any(v in o for v in _VIRAL):
         # viral antigen results & bare positive/negative — not bacterial/fungal growth
         if o.startswith("POSITIVE FOR") and ("STAPH" in o or "METHICILLIN" in o):
             pass  # handled below (MRSA string)
@@ -191,3 +214,24 @@ if __name__ == "__main__":
     for t in tests:
         c = classify(t)
         print(f"{t:52s} -> {c['broad_group']:14s} | {c['genus_group']:32s} | org={c['is_organism']} sp={c['is_species_level']} lowres={c['is_low_resolution']}")
+
+    # Adversarial tests: laboratory strings that name an organism in order to exclude it. A
+    # substring matcher reads these as the named organism, which is the opposite of the report.
+    print("\n--- negation handling ---")
+    NEG_CASES = [
+        ("NON-FERMENTER, NOT PSEUDOMONAS AERUGINOSA", "Other gram-negative"),
+        ("BACILLUS SPECIES; NOT ANTHRACIS", "Other gram-positive"),
+        ("YEAST, PRESUMPTIVELY NOT C. ALBICANS", "Fungi/yeast"),
+        ("BETA STREPTOCOCCI, NOT GROUP A", "Streptococcus"),
+        ("HAEMOPHILUS SPECIES NOT INFLUENZAE", "Other gram-negative"),
+        ("STAPHYLOCOCCUS, COAGULASE NEGATIVE", "Coagulase-negative staphylococci"),
+        ("PSEUDOMONAS AERUGINOSA", "Pseudomonas aeruginosa"),
+    ]
+    ok = True
+    for s, expected in NEG_CASES:
+        got = classify(s)["genus_group"]
+        flag = "ok " if got == expected else "FAIL"
+        if got != expected:
+            ok = False
+        print(f"  {flag} {s:44s} -> {got!r} (expected {expected!r})")
+    print("all negation tests passed" if ok else "NEGATION TESTS FAILED")

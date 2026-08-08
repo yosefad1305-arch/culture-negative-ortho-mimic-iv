@@ -1,150 +1,283 @@
 """
-Phase 6 figures, NEJM style (ggsci NEJM palette, Helvetica, 600 DPI PDF+PNG, uppercase panels).
-  Figure 1 - organism spectrum (overall; PJI vs osteomyelitis)
-  Figure 2 - no-growth benchmark: by source, by infection type, by sampling intensity
-  Figure 3 - antimicrobial resistance (S. aureus panel; gram-negative panel)
-  Figure 4 - diagnostic yield by source; anticipatability probe
-"""
-import os, json, sys, numpy as np
-import matplotlib.pyplot as plt
-sys.path.insert(0, os.path.dirname(__file__))
-from nejm_kit import (set_style, panel, faint_grid, save,
-    NEJM_BLUE, NEJM_RED, NEJM_ORANGE, NEJM_GREEN, NEJM_LTBLUE, GREY, LABEL, MUTED)
+Figures 1-3. All estimates carry patient-clustered 95% confidence intervals.
 
-PROJ=r"C:\Users\Owner\ortho-mimic-study"; OUT=os.path.join(PROJ,"output")
-FIG=os.path.join(OUT,"figures"); os.makedirs(FIG,exist_ok=True)
-R=json.load(open(os.path.join(OUT,"results_digest.json")))
-S=json.load(open(os.path.join(OUT,"stats_digest.json")))
-M=json.load(open(os.path.join(OUT,"ml_digest.json")))
+Fig 1  No growth: (a) by specimen label tier, (b) by specimen source within the source-specific
+       tier, (c) by number of evaluable source-specific specimens per episode, (d) within the
+       episodes that contributed both tiers.
+Fig 2  Organism spectrum of source-specific deep musculoskeletal isolates, under three
+       deduplication rules (all isolates, episode-first, patient-first).
+Fig 3  Resistance: (a) S. aureus panel, (b) gram-negative panel, episode-first isolates;
+       (c) oxacillin resistance by anchor-year group.
+
+Figure numbers here match the legends in the manuscript. The panels are built in a different
+order for layout reasons; the output filenames are what the journal receives.
+"""
+import json
+import os
+import sys
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+sys.path.insert(0, os.path.dirname(__file__))
+from figure_kit import set_style, save, panel, faint_grid, BLUE, GREY, SALMON, OKABE
+
+from paths import OUT, FIG
+
+with open(os.path.join(OUT, "results_digest.json"), encoding="utf-8") as f:
+    D = json.load(f)
+
 set_style()
 
-CAT={"deep_tissue_bone":"Deep tissue or bone","synovial_joint":"Synovial or joint fluid",
-     "implant_sonication":"Implant sonication","abscess_deep_fluid":"Abscess or deep fluid",
-     "superficial_swab":"Superficial swab","blood":"Blood"}
-IT={"PJI":"Prosthetic joint\ninfection","Osteomyelitis":"Native\nosteomyelitis","Device (other)":"Other device\ninfection"}
 
-def err_from(fr,lo,hi): return [[f-l for f,l in zip(fr,lo)],[h-f for f,h in zip(fr,hi)]]
+def err(blk):
+    """Asymmetric error bar heights from a patient-clustered interval."""
+    lo, hi = blk["clustered_ci"]
+    e = blk["est"]
+    if any(np.isnan([lo, hi])):
+        return [[0.0], [0.0]]
+    return [[max(0.0, e - lo)], [max(0.0, hi - e)]]
 
-# ---------------- Figure 1 ----------------
-def fig1():
-    over=R["aim1_organism"]["by_genus_group"]
-    items=[(k,v) for k,v in sorted(over.items(),key=lambda kv:kv[1]["pct"],reverse=True) if v["pct"]>=0.5][:9]
-    names=[k for k,_ in items]; pcts=[v["pct"] for _,v in items]
-    pji=R["aim1_organism"]["by_infection_type"]["PJI"]["by_genus_group"]
-    ost=R["aim1_organism"]["by_infection_type"]["Osteomyelitis"]["by_genus_group"]
-    fig,axes=plt.subplots(1,2,figsize=(11,4.9))
-    ax=axes[0]; y=np.arange(len(names))[::-1]
-    ax.barh(y,pcts,color=NEJM_BLUE,zorder=3,height=0.68)
-    ax.set_yticks(y); ax.set_yticklabels(names)
-    ax.set_xlabel("Percentage of isolates")
-    for yv,pv in zip(y,pcts): ax.text(pv+0.5,yv,f"{pv:.1f}",va="center",fontsize=8,color=LABEL)
-    faint_grid(ax,"x"); ax.set_xlim(0,max(pcts)*1.16); panel(ax,"A")
-    ax=axes[1]; top6=names[:6]
-    SHORT={"Staphylococcus aureus":"S. aureus","Coagulase-negative staphylococci":"CoNS",
-           "Other gram-negative":"Other\nGNB","Streptococcus":"Strepto-\ncoccus",
-           "Enterococcus":"Entero-\ncoccus","Other gram-positive":"Other\nGPC",
-           "Pseudomonas aeruginosa":"P. aeru-\nginosa","Anaerobe":"Anaerobe","Escherichia coli":"E. coli"}
-    pv=[pji.get(n,{}).get("pct",0) for n in top6]; ov=[ost.get(n,{}).get("pct",0) for n in top6]
-    x=np.arange(len(top6)); w=0.38
-    ax.bar(x-w/2,pv,w,label="Prosthetic joint infection",color=NEJM_BLUE,zorder=3)
-    ax.bar(x+w/2,ov,w,label="Native osteomyelitis",color=NEJM_RED,zorder=3)
-    ax.set_xticks(x); ax.set_xticklabels([SHORT.get(n,n) for n in top6],fontsize=8)
-    ax.set_ylabel("Percentage of isolates")
-    ax.legend(frameon=False,loc="upper center",bbox_to_anchor=(0.5,1.16),ncol=2,fontsize=8.5)
-    faint_grid(ax,"y"); panel(ax,"B")
-    fig.tight_layout(); save(fig,os.path.join(FIG,"Figure1_organism_spectrum"))
 
-# ---------------- Figure 2 (3 panels: source, type, sampling gradient) ----------------
-def fig2():
-    a2=R["aim2_culture_negative"]
-    fig,axes=plt.subplots(1,3,figsize=(13,4.5))
-    # A: by source
-    ax=axes[0]; cats=["deep_tissue_bone","synovial_joint","implant_sonication"]
-    fr=[a2["by_source_category"][c]["frac"]*100 for c in cats]
-    lo=[a2["by_source_category"][c]["ci"][0]*100 for c in cats]; hi=[a2["by_source_category"][c]["ci"][1]*100 for c in cats]
-    x=np.arange(len(cats))
-    ax.bar(x,fr,color=NEJM_BLUE,zorder=3,width=0.62,yerr=err_from(fr,lo,hi),capsize=4,error_kw=dict(lw=1,ecolor=LABEL))
-    ax.set_xticks(x); ax.set_xticklabels([CAT[c].replace(" ","\n") for c in cats],fontsize=8)
-    ax.set_ylabel("No-growth specimens (%)")
-    for xv,fv,hv in zip(x,fr,hi): ax.text(xv,hv+1.8,f"{fv:.1f}",ha="center",fontsize=8.5,color=LABEL)
-    faint_grid(ax,"y"); ax.set_ylim(0,70); panel(ax,"A")
-    # B: by infection type
-    ax=axes[1]; its=["PJI","Osteomyelitis","Device (other)"]
-    fr=[a2["by_infection_type"][i]["frac"]*100 for i in its]
-    lo=[a2["by_infection_type"][i]["ci"][0]*100 for i in its]; hi=[a2["by_infection_type"][i]["ci"][1]*100 for i in its]
-    x=np.arange(len(its))
-    ax.bar(x,fr,color=[NEJM_BLUE,NEJM_RED,GREY],zorder=3,width=0.62,yerr=err_from(fr,lo,hi),capsize=4,error_kw=dict(lw=1,ecolor=LABEL))
-    ax.set_xticks(x); ax.set_xticklabels([IT[i] for i in its],fontsize=8)
-    ax.set_ylabel("No-growth specimens (%)")
-    for xv,fv,hv in zip(x,fr,hi): ax.text(xv,hv+1.8,f"{fv:.1f}",ha="center",fontsize=8.5,color=LABEL)
-    faint_grid(ax,"y"); ax.set_ylim(0,70); panel(ax,"B")
-    # C: by sampling intensity (the ascertainment gradient)
-    ax=axes[2]; cc=a2["cn_by_specimen_count"]; bands=["1","2-3","4-6","7+"]
-    fr=[cc[b]["frac"]*100 for b in bands]; lo=[cc[b]["ci"][0]*100 for b in bands]; hi=[cc[b]["ci"][1]*100 for b in bands]
-    x=np.arange(len(bands))
-    ax.errorbar(x,fr,yerr=err_from(fr,lo,hi),fmt="o-",color=NEJM_ORANGE,ecolor=LABEL,
-                elinewidth=1,capsize=3,ms=7,mfc=NEJM_ORANGE,mec="white",mew=1,zorder=3,lw=1.6)
-    ax.set_xticks(x); ax.set_xticklabels(bands)
-    ax.set_xlabel("Deep specimens per episode"); ax.set_ylabel("No-growth specimens (%)")
-    for xv,fv,hv in zip(x,fr,hi): ax.text(xv,hv+1.6,f"{fv:.1f}",ha="center",fontsize=8.5,color=LABEL)
-    faint_grid(ax,"y"); ax.set_ylim(0,70); panel(ax,"C")
-    fig.tight_layout(); save(fig,os.path.join(FIG,"Figure2_culture_negative"))
+# Formal agent names for figures and tables. Informal laboratory contractions are not used in
+# published output; the expansions are given in the figure legends.
+AGENT_NAMES = {
+    "OXACILLIN": "Oxacillin", "VANCOMYCIN": "Vancomycin", "ERYTHROMYCIN": "Erythromycin",
+    "CLINDAMYCIN": "Clindamycin", "LEVOFLOXACIN": "Levofloxacin", "GENTAMICIN": "Gentamicin",
+    "TETRACYCLINE": "Tetracycline", "RIFAMPIN": "Rifampin", "CEFTRIAXONE": "Ceftriaxone",
+    "CEFEPIME": "Cefepime", "CIPROFLOXACIN": "Ciprofloxacin", "TOBRAMYCIN": "Tobramycin",
+    "MEROPENEM": "Meropenem",
+    "TRIMETHOPRIM/SULFA": "TMP–SMX",
+    "PIPERACILLIN/TAZO": "Piperacillin–tazobactam",
+}
 
-# ---------------- Figure 3 ----------------
-def _hpanel(ax, panel_data, order, color, letter):
-    order=[a for a in order if a in panel_data]
-    fr=[panel_data[a]["pctR"] for a in order]; lo=[panel_data[a]["ci"][0] for a in order]; hi=[panel_data[a]["ci"][1] for a in order]
-    y=np.arange(len(order))[::-1]
-    ax.barh(y,fr,color=color,zorder=3,height=0.66,xerr=err_from(fr,lo,hi),capsize=3,error_kw=dict(lw=0.9,ecolor=LABEL))
-    nice={"TRIMETHOPRIM/SULFA":"TMP-SMX","PIPERACILLIN/TAZO":"Piperacillin-tazobactam"}
-    ax.set_yticks(y); ax.set_yticklabels([nice.get(a,a.title()) for a in order],fontsize=8.5)
-    ax.set_xlabel("Isolates resistant (%)")
-    for yv,fv,hv in zip(y,fr,hi): ax.text(hv+1.4,yv,f"{fv:.0f}",va="center",fontsize=7.5,color=LABEL)
-    faint_grid(ax,"x"); ax.set_xlim(0,max(hi+[10])*1.22); panel(ax,letter)
 
-def fig3():
-    sa=R["aim3_resistance"]["saureus_panel"]; gn=R["aim3_resistance"]["gramneg_panel"]
-    fig,axes=plt.subplots(1,2,figsize=(11,5.0))
-    _hpanel(axes[0], sa, ["OXACILLIN","ERYTHROMYCIN","LEVOFLOXACIN","CLINDAMYCIN","TETRACYCLINE",
-                          "TRIMETHOPRIM/SULFA","RIFAMPIN","GENTAMICIN","VANCOMYCIN"], NEJM_RED, "A")
-    _hpanel(axes[1], gn, ["CIPROFLOXACIN","TRIMETHOPRIM/SULFA","CEFTRIAXONE","CEFEPIME","GENTAMICIN",
-                          "PIPERACILLIN/TAZO","TOBRAMYCIN","MEROPENEM"], NEJM_BLUE, "B")
-    mr=R["aim3_resistance"]["mrsa_among_saureus"]
-    axes[0].text(0.98,0.02,f"MRSA {mr['frac']*100:.0f}% (95% CI {mr['ci'][0]*100:.0f}-{mr['ci'][1]*100:.0f}; n={mr['tested']})",
-            transform=axes[0].transAxes,ha="right",va="bottom",fontsize=8,color=MUTED)
-    fig.tight_layout(); save(fig,os.path.join(FIG,"Figure3_resistance"))
+def agent_label(key):
+    return AGENT_NAMES.get(key, key.title())
 
-# ---------------- Figure 4 ----------------
-def fig4():
-    yld=R["aim4_intensity"]["yield_by_source_category"]
-    cats=[c for c in ["deep_tissue_bone","synovial_joint","implant_sonication","abscess_deep_fluid","blood"] if c in yld]
-    fig,axes=plt.subplots(1,2,figsize=(11,4.6))
-    ax=axes[0]
-    fr=[yld[c]["frac"]*100 for c in cats]; lo=[yld[c]["ci"][0]*100 for c in cats]; hi=[yld[c]["ci"][1]*100 for c in cats]
-    y=np.arange(len(cats))[::-1]
-    ax.barh(y,fr,color=NEJM_BLUE,zorder=3,height=0.64,xerr=err_from(fr,lo,hi),capsize=3,error_kw=dict(lw=0.9,ecolor=LABEL))
-    ax.set_yticks(y); ax.set_yticklabels([CAT[c] for c in cats],fontsize=8.5)
-    ax.set_xlabel("Culture-positive (%)"); faint_grid(ax,"x"); ax.set_xlim(0,100); panel(ax,"A")
-    for yv,fv,hv in zip(y,fr,hi): ax.text(hv+1.8,yv,f"{fv:.0f}",va="center",fontsize=8,color=LABEL)
-    ax=axes[1]
-    labels=["Clinical\ncontext","+ Inflammatory\nlabs"]
-    au=[M["M1_context"]["auroc"],M["M2_with_labs"]["auroc"]]; ci=[M["M1_context"]["auroc_ci"],M["M2_with_labs"]["auroc_ci"]]
-    x=np.arange(2)
-    # dot-with-CI (not bars): bar length on a truncated AUROC axis exaggerates a near-null difference
-    ax.errorbar(x,au,yerr=err_from(au,[c[0] for c in ci],[c[1] for c in ci]),fmt="o",ms=8,
-                mfc=NEJM_BLUE,mec="white",mew=1.2,color=LABEL,ecolor=LABEL,elinewidth=1.2,capsize=5,zorder=3)
-    ax.plot(x,au,color=NEJM_LTBLUE,lw=1,zorder=2)
-    ax.axhline(0.5,ls="--",lw=0.9,color="#9CA3AF",zorder=1)
-    ax.text(1.98,0.505,"chance",ha="right",va="bottom",fontsize=7.5,color=MUTED)
-    ax.set_xticks(x); ax.set_xticklabels(labels,fontsize=8.5); ax.set_ylabel("Out-of-fold AUROC")
-    ax.set_ylim(0.45,0.75); ax.set_xlim(-0.5,1.6)
-    for xv,av,c in zip(x,au,ci): ax.text(xv+0.06,av,f"{av:.3f}",ha="left",va="center",fontsize=9,color=LABEL)
-    ax.text(0.5,0.02,f"Δ = {M['paired_auroc_gain']['delta']:+.3f} (95% CI {M['paired_auroc_gain']['ci'][0]:+.3f} to {M['paired_auroc_gain']['ci'][1]:+.3f})",
-            transform=ax.transAxes,ha="center",va="bottom",fontsize=8,color=MUTED)
-    panel(ax,"B")
-    fig.tight_layout(); save(fig,os.path.join(FIG,"Figure4_yield_and_probe"))
 
-fig1(); fig2(); fig3(); fig4()
-print("NEJM-style figures written:")
-for f in sorted(os.listdir(FIG)):
-    if f.endswith(".pdf"): print("  ",f)
+def hbar(ax, blocks, labels, color=BLUE):
+    y = np.arange(len(blocks))[::-1]
+    est = [b["est"] * 100 for b in blocks]
+    lo = [max(0, (b["est"] - b["clustered_ci"][0]) * 100) for b in blocks]
+    hi = [max(0, (b["clustered_ci"][1] - b["est"]) * 100) for b in blocks]
+    ax.barh(y, est, color=color, height=0.62, zorder=3)
+    ax.errorbar(est, y, xerr=[lo, hi], fmt="none", ecolor="#2B2B2B", elinewidth=0.9,
+                capsize=2.5, zorder=4)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
+    faint_grid(ax, "x")
+    return y
+
+
+# ---------------------------------------------------------------- Fig 2: spectrum
+rules = [("all_isolates", "All isolates"),
+         ("first_isolate_episode", "First isolate per episode"),
+         ("first_isolate_patient", "First isolate per patient")]
+present = [(k, lab) for k, lab in rules if f"strict|{k}" in D["spectrum"]]
+# organism order from the episode-first rule, which is the primary
+base = D["spectrum"]["strict|first_isolate_episode"]["top_frac"]
+orgs = [o for o, _ in sorted(base.items(), key=lambda kv: -kv[1])][:8]
+
+fig, ax = plt.subplots(figsize=(6.85, 4.2))
+w = 0.26
+x = np.arange(len(orgs))
+for i, (k, lab) in enumerate(present):
+    b = D["spectrum"][f"strict|{k}"]
+    vals = [b["top_frac"].get(o, 0.0) * 100 for o in orgs]
+    ax.bar(x + (i - 1) * w, vals, width=w, label=f"{lab} (n = {b['n_isolates']:,})",
+           color=[BLUE, SALMON, GREY][i], zorder=3)
+ax.set_xticks(x)
+ax.set_xticklabels([o.replace(" (Propionibacterium)", "") for o in orgs],
+                   rotation=30, ha="right")
+ax.set_ylabel("Share of speciated isolates (%)")
+ax.legend(frameon=False, loc="upper right")
+faint_grid(ax, "y")
+save(fig, os.path.join(FIG, "Fig2"))
+print("Fig2 (organism spectrum) written")
+
+# ---------------------------------------------------------------- Fig 1: no-growth
+# Built as a 2x2 at the journal's full text width (174 mm = 6.85 in) so that no reduction is
+# applied in production and the 8-9 pt lettering survives at final size. A 1x4 strip at this
+# width would shrink the type to roughly 4 pt.
+fig, axg = plt.subplots(2, 2, figsize=(6.85, 6.4))
+axes = axg.ravel()
+
+# (a) by tier
+tiers = [("strict", "Source-specific\n(joint fluid,\nsonicate)"),
+         ("generic", "Generic\n(tissue, biopsy,\nforeign body)"),
+         ("pooled", "Pooled")]
+blocks = [D["no_growth"][k] for k, _ in tiers]
+ax = axes[0]
+xs = np.arange(len(blocks))
+est = [b["est"] * 100 for b in blocks]
+lo = [max(0, (b["est"] - b["clustered_ci"][0]) * 100) for b in blocks]
+hi = [max(0, (b["clustered_ci"][1] - b["est"]) * 100) for b in blocks]
+ax.bar(xs, est, color=[BLUE, GREY, SALMON], width=0.6, zorder=3)
+ax.errorbar(xs, est, yerr=[lo, hi], fmt="none", ecolor="#2B2B2B", elinewidth=0.9,
+            capsize=3, zorder=4)
+ax.set_xticks(xs)
+ax.set_xticklabels([lab for _, lab in tiers], fontsize=8)
+ax.set_ylabel("Specimens with no growth (%)")
+ax.set_ylim(0, 65)
+for xi, b in zip(xs, blocks):
+    ax.text(xi, b["est"] * 100 + 6, f"{b['n']:,}", ha="center", fontsize=8, color="#6B7280")
+faint_grid(ax, "y")
+panel(ax, "a")
+
+# (b) by source within strict
+src = D["no_growth"]["strict_by_source"]
+names = {"synovial_joint": "Synovial /\njoint fluid", "implant_sonication": "Implant\nsonication"}
+axes[1].set_title("")  # titles live in the caption, never in the figure
+keys = [k for k in ["synovial_joint", "implant_sonication"] if k in src]
+ax = axes[1]
+xs = np.arange(len(keys))
+blocks = [src[k] for k in keys]
+est = [b["est"] * 100 for b in blocks]
+lo = [max(0, (b["est"] - b["clustered_ci"][0]) * 100) for b in blocks]
+hi = [max(0, (b["clustered_ci"][1] - b["est"]) * 100) for b in blocks]
+ax.bar(xs, est, color=BLUE, width=0.55, zorder=3)
+ax.errorbar(xs, est, yerr=[lo, hi], fmt="none", ecolor="#2B2B2B", elinewidth=0.9,
+            capsize=3, zorder=4)
+ax.set_xticks(xs)
+ax.set_xticklabels([names[k] for k in keys], fontsize=8)
+ax.set_ylabel("Specimens with no growth (%)")
+ax.set_ylim(0, 65)
+for xi, b in zip(xs, blocks):
+    ax.text(xi, b["est"] * 100 + 6, f"{b['n']:,}", ha="center", fontsize=8, color="#6B7280")
+faint_grid(ax, "y")
+panel(ax, "b")
+
+# (c) sampling gradient
+grad = D["sampling_gradient_strict"]
+gk = [k for k in ["1", "2", "3", "4-6", "7+"] if k in grad]
+ax = axes[2]
+xs = np.arange(len(gk))
+blocks = [grad[k] for k in gk]
+est = [b["est"] * 100 for b in blocks]
+# Strata whose clustered interval is not estimable (too few patients to resample) are drawn as
+# unconnected open markers without error bars, so the panel cannot be read as a dose-response
+# trend running through them.
+estimable = [not np.isnan(b["clustered_ci"][0]) and not np.isnan(b["clustered_ci"][1])
+             for b in blocks]
+lo = [max(0, (b["est"] - b["clustered_ci"][0]) * 100) if ok else 0
+      for b, ok in zip(blocks, estimable)]
+hi = [max(0, (b["clustered_ci"][1] - b["est"]) * 100) if ok else 0
+      for b, ok in zip(blocks, estimable)]
+
+solid = [i for i, ok in enumerate(estimable) if ok]
+sparse = [i for i, ok in enumerate(estimable) if not ok]
+ax.errorbar([xs[i] for i in solid], [est[i] for i in solid],
+            yerr=[[lo[i] for i in solid], [hi[i] for i in solid]],
+            fmt="o-", color=BLUE, ecolor="#2B2B2B", elinewidth=0.9, capsize=3, ms=5, zorder=4)
+if sparse:
+    ax.plot([xs[i] for i in sparse], [est[i] for i in sparse], "o", mfc="white",
+            mec=BLUE, mew=1.4, ms=6, ls="none", zorder=4)
+    for i in sparse:
+        ax.annotate("CI not\nestimable", (xs[i], est[i]), textcoords="offset points",
+                    xytext=(0, -30), ha="center", fontsize=7, color="#6B7280")
+ax.set_xticks(xs)
+ax.set_xticklabels(gk)
+ax.set_xlabel("Evaluable source-specific specimens per episode")
+ax.set_ylabel("Specimens with no growth (%)")
+ax.set_ylim(0, 90)
+for xi, b in zip(xs, blocks):
+    ax.text(xi, 82, f"{b['n']:,}", ha="center", fontsize=8, color="#6B7280")
+faint_grid(ax, "y")
+panel(ax, "c")
+
+# (d) within-episode paired comparison, episode level.
+# A tier counts as negative for an episode only when every evaluable specimen in it grew nothing.
+# The episode-level difference runs in the SAME direction as the between-cohort one in panel a,
+# and is confounded by specimen count (median 1 source-specific vs 3 generic per episode); the
+# episode-stratified per-specimen model shows no significant difference. The caption says so.
+wi = D["within_episode"]
+pt = wi["paired_table"]
+ptst = wi["paired_test"]
+cl = wi.get("conditional_logit", {})
+n_ep = pt["n_episodes"]
+ax = axes[3]
+
+# Plotting the paired difference with its interval, rather than two independent-looking bars,
+# because the comparison is paired and because the raw proportions invite a per-specimen reading
+# the data do not support.
+d = ptst["diff"] * 100
+lo_d, hi_d = ptst["diff_ci"][0] * 100, ptst["diff_ci"][1] * 100
+ax.axvline(0, color="#9CA3AF", lw=0.9, ls="--", zorder=2)
+ax.errorbar([d], [0], xerr=[[d - lo_d], [hi_d - d]], fmt="o", color=BLUE, ecolor="#2B2B2B",
+            elinewidth=1.2, capsize=4, ms=7, zorder=4)
+ax.set_yticks([0])
+ax.set_yticklabels(["Episode entirely\nnegative"], fontsize=8)
+ax.set_ylim(-0.9, 1.5)
+ax.set_xlim(-6, 20)
+ax.set_xlabel("Paired difference, source-specific minus generic\n(percentage points)", fontsize=8)
+ax.text(d, 0.42, f"{d:+.1f} ({lo_d:+.1f} to {hi_d:+.1f})", ha="center", fontsize=8,
+        color="#2B2B2B")
+ax.text(-5.4, 1.24, f"{n_ep:,} episodes sampled both ways; "
+        f"{pt['strict_all_negative_only']:,} vs {pt['generic_all_negative_only']:,} discordant",
+        ha="left", va="top", fontsize=7, color="#6B7280")
+if "or_" in cl:
+    ax.text(-5.4, 0.96, f"episode-stratified per-specimen OR {cl['or_']:.2f} "
+            f"({cl['ci'][0]:.2f}-{cl['ci'][1]:.2f})",
+            ha="left", va="top", fontsize=7, color="#6B7280")
+faint_grid(ax, "x")
+panel(ax, "d")
+
+fig.tight_layout()
+save(fig, os.path.join(FIG, "Fig1"))
+print("Fig1 (no growth) written")
+
+# ---------------------------------------------------------------- Fig 3: resistance
+# Two rows at journal text width: the two agent panels share the top row, and the era panel takes
+# a full row of its own. Three panels abreast at 174 mm leaves the era axis too narrow for its
+# tick labels.
+fig = plt.figure(figsize=(6.85, 6.2))
+gs = fig.add_gridspec(2, 2, height_ratios=[1.35, 1.0], hspace=0.55, wspace=0.72)
+
+sa = D["amr"]["pooled|first_isolate_episode|saureus"]
+sa_keys = [k for k, v in sa.items() if v.get("est") is not None]
+sa_keys = sorted(sa_keys, key=lambda k: sa[k]["est"])
+ax = fig.add_subplot(gs[0, 0])
+hbar(ax, [sa[k] for k in sa_keys], [agent_label(k) for k in sa_keys], color=BLUE)
+ax.set_xlabel("Isolates reported resistant (%)", fontsize=8)
+ax.set_xlim(0, 96)
+ax.tick_params(labelsize=8)
+for yi, k in zip(np.arange(len(sa_keys))[::-1], sa_keys):
+    ax.text(95, yi, f"{sa[k]['n']:,}", va="center", ha="right", fontsize=7, color="#6B7280")
+panel(ax, "a")
+
+gn = D["amr"]["pooled|first_isolate_episode|gramneg"]
+gn_keys = [k for k, v in gn.items() if v.get("est") is not None]
+gn_keys = sorted(gn_keys, key=lambda k: gn[k]["est"])
+ax = fig.add_subplot(gs[0, 1])
+hbar(ax, [gn[k] for k in gn_keys], [agent_label(k) for k in gn_keys], color=SALMON)
+ax.set_xlabel("Isolates reported resistant (%)", fontsize=8)
+ax.set_xlim(0, 96)
+ax.tick_params(labelsize=8)
+for yi, k in zip(np.arange(len(gn_keys))[::-1], gn_keys):
+    ax.text(95, yi, f"{gn[k]['n']:,}", va="center", ha="right", fontsize=7, color="#6B7280")
+panel(ax, "b")
+
+era = {k: v for k, v in D["era_mrsa"].items() if k != "trend_test"}
+ek = sorted(era)
+ax = fig.add_subplot(gs[1, :])
+xs = np.arange(len(ek))
+blocks = [era[k] for k in ek]
+est = [b["est"] * 100 for b in blocks]
+lo = [max(0, (b["est"] - b["clustered_ci"][0]) * 100) for b in blocks]
+hi = [max(0, (b["clustered_ci"][1] - b["est"]) * 100) for b in blocks]
+ax.errorbar(xs, est, yerr=[lo, hi], fmt="o-", color=BLUE, ecolor="#2B2B2B", elinewidth=0.9,
+            capsize=3, ms=5, zorder=4)
+ax.set_xticks(xs)
+ax.set_xticklabels([k.replace(" - ", "-") for k in ek], fontsize=8)
+ax.set_xlim(-0.4, len(ek) - 0.6)
+ax.set_xlabel("Anchor-year group", fontsize=8)
+ax.set_ylabel("Oxacillin-resistant\nS. aureus (%)", fontsize=8)
+ax.set_ylim(0, 78)
+ax.tick_params(labelsize=8)
+for xi, b in zip(xs, blocks):
+    ax.text(xi, 72, f"{b['n']:,}", ha="center", fontsize=7.5, color="#6B7280")
+faint_grid(ax, "y")
+panel(ax, "c")
+save(fig, os.path.join(FIG, "Fig3"))
+print("Fig3 (resistance) written")

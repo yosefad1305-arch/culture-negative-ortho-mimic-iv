@@ -4,7 +4,7 @@ Phase 8 citation verification. Each reference is matched against Crossref, the r
 and a Zotero-importable BibTeX file is emitted. Crossref artifacts (ALL-CAPS, <scp> tags) are cleaned.
 """
 import urllib.request, urllib.parse, json, re, os, html
-OUT=r"C:\Users\Owner\ortho-mimic-study\manuscript"
+from paths import OUT
 UA={"User-Agent":"ortho-mimic-study/1.0 (mailto:local@local)"}
 
 # (key, query, expected first-author surname, expected year) — queries are bibliographic strings
