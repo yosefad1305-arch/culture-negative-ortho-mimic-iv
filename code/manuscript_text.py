@@ -17,11 +17,12 @@ KEYWORDS = ("Prosthetic joint infection; Osteomyelitis; Culture-negative infecti
 ABSTRACT = [
     ("Purpose", "Culture-based descriptions of bone and joint infection are increasingly drawn "
      "from databases in which specimens carry free-text laboratory labels rather than anatomical "
-     "sites. We measured how far such estimates depend on which labels are analysed."),
+     "sites. We measured how far such estimates depend on the labels analysed."),
     ("Methods", "Measurement study in MIMIC-IV version 3.1, a de-identified single-centre US "
      "database (anchor-year groups 2008-2010 to 2020-2022), of episodes coded for prosthetic "
      "joint infection, native osteomyelitis or other orthopaedic device infection. Specimen "
-     "labels were split a priori into a source-specific tier (joint fluid, prosthetic joint "
+     "labels were split into a source-specific tier (joint "
+     "fluid, prosthetic joint "
      "fluid, sonication) and a generic tier (tissue, biopsy, foreign body). No growth required a "
      "completed routine bacterial culture; first isolates were defined within each tier. "
      "Proportions carry patient-clustered 95% confidence intervals (CIs)."),
@@ -30,11 +31,11 @@ ABSTRACT = [
      "44.1-51.9) versus 34.0% (32.2-35.8) and the polymicrobial fraction 10.9% (7.7-14.4) versus "
      "42.1% (40.1-44.0), but the cohorts differed in case mix and specimens per episode (median 1 "
      "versus 3). Among the 487 episodes contributing both tiers, the source-specific tier was "
-     "entirely negative in 40.7% and the generic tier in 31.6% (difference 9.0 points; 4.1-13.8), "
-     "a gap that tracks specimen count; an episode-stratified per-specimen model did not detect "
-     "an association with the label (odds ratio, 0.86; 0.64-1.15)."),
+     "entirely negative in 40.7% and the generic tier in 31.6% (difference 9.0 points; 4.1-13.8); "
+     "an episode-stratified per-specimen model did not detect an association with the label (odds "
+     "ratio, 0.86; 0.64-1.15)."),
     ("Conclusion", "Culture estimates differ substantially between specimen-label-defined "
-     "cohorts, while within patients no per-specimen association with the label was detected. "
+     "cohorts, while within episodes no per-specimen association with the label was detected. "
      "Such studies should report the label set, deduplication scope and low-resolution-growth "
      "rule."),
 ]
@@ -59,7 +60,7 @@ INTRODUCTION = [
     "body may or may not be an orthopaedic implant. Investigators must therefore choose which "
     "labels to admit, and that choice is rarely stated or examined.",
 
-    "We used MIMIC-IV to measure what that choice does. We separated specimen labels a priori by "
+    "We used MIMIC-IV to measure what that choice does. We separated specimen labels by "
     "whether they name a musculoskeletal source, recomputed the organism spectrum, the "
     "polymicrobial fraction, the resistance profile and the no-growth fraction within each label "
     "set, and then asked what a between-cohort comparison cannot answer: within the episodes that "
@@ -79,12 +80,13 @@ METHODS = [
 
     ("Ethics",
      ["This study was performed in line with the principles of the Declaration of Helsinki. It is "
-      "a secondary analysis of an existing, fully de-identified, publicly available database. The "
+      "a secondary analysis of an existing, de-identified, credentialed-access database. The "
       "collection and sharing of MIMIC-IV were approved by the institutional review board of the "
       "Beth Israel Deaconess Medical Center, which granted a waiver of informed consent for that "
       "resource; that approval covers the source database rather than this particular analysis, "
       "and no study-specific ethical review was sought or required for secondary use of "
-      "de-identified public data. No identifiable patient information was accessed."]),
+      "the de-identified database under its data use agreement. No identifiable patient "
+      "information was accessed."]),
 
     ("Cohort",
      ["We identified hospital episodes (unique admissions) carrying an International "
@@ -100,7 +102,7 @@ METHODS = [
       "through 2020-2022. Episode counts by anchor-year group are given in Online Resource 1."]),
 
     ("Specimen label tiers",
-     ["Specimen labels were assigned before any outcome was examined to one of two tiers. The "
+     ["Specimen labels were assigned to one of two tiers by the rules below, which are published as code. The "
       "source-specific tier comprises labels that name a musculoskeletal structure or an "
       "orthopaedic-implant procedure: joint fluid, prosthetic joint fluid, and explicit implant "
       "sonication, the last identified either from the specimen label or from a sonication "
@@ -166,7 +168,7 @@ METHODS = [
       "Both of those rules count only growth that was identified to genus or species. Growth that "
       "was never speciated, principally an explicit report of mixed bacterial flora, contributes "
       "no organisms under a speciated-only rule and is scored monomicrobial, which is a reporting "
-      "artefact rather than a microbiological finding. A third prespecified rule therefore counts "
+      "artefact rather than a microbiological finding. A third rule therefore counts "
       "an explicit report of mixed flora as polymicrobial, and the fraction of episodes with such "
       "a report is given separately."]),
 
@@ -234,40 +236,28 @@ RESULTS = [
       "infection (Table 1). A source-specific specimen was obtained in 653 episodes (8.5%; 552 "
       "patients) and a generic specimen in 3397 (44.1%). The source-specific cohort was "
       "predominantly prosthetic joint infection (439 of 653, 67.2%), whereas the generic tier was "
-      "predominantly osteomyelitis, so the two label sets describe different patients as well as "
-      "different specimens. That asymmetry is the reason the primary comparison is made within "
-      "episodes.",
+      "predominantly osteomyelitis.",
       "Requiring a completed, reported routine bacterial culture excluded few specimens: of 887 "
       "source-specific and 6811 generic bacterial cultures, 885 and 6777 respectively were "
-      "evaluable, an exclusion of 0.47% across all deep specimens (Online Resource 1). Cancelled, "
-      "incomplete and uninterpretable tests are a real but quantitatively minor threat to a "
-      "no-growth denominator here, and stating the accounting is what makes that assessment "
-      "possible."]),
+      "evaluable, an exclusion of 0.47% across all deep specimens (Online Resource 1)."]),
 
     ("Estimates differ between label-defined cohorts",
      ["No growth was reported in 48.0% of evaluable source-specific specimens (425 of 885; "
       "patient-clustered 95% CI, 44.1-51.9) against 34.0% of generic specimens (2304 of 6777; "
       "32.2-35.8); the pooled figure was 35.6% (2729 of 7662; 33.9-37.4), close to the generic "
-      "tier because generic specimens outnumber source-specific ones almost eightfold (Fig. 1a). "
-      "Reporting the pooled value alone would understate no growth in source-specific specimens "
-      "by more than 12 percentage points.",
-      "The polymicrobial fraction diverged further. Among source-specific culture-positive "
-      "episodes, 10.9% were polymicrobial (38 of 348; 7.7-14.4), against 42.1% pooled (1174 of "
-      "2789; 40.1-44.0). Using the normalised dictionary rather than the raw laboratory string "
-      "changed this by about a percentage point in either tier (source-specific 10.3%; pooled "
-      "41.1%), so organism-string handling is not what separates them.",
+      "tier because generic specimens outnumber source-specific ones almost eightfold (Fig. 1a).",
+      "Among source-specific culture-positive episodes, 10.9% were polymicrobial (38 of 348; "
+      "7.7-14.4), against 42.1% pooled (1174 of 2789; 40.1-44.0). Using the normalised dictionary "
+      "rather than the raw laboratory string changed this by about a percentage point in either "
+      "tier (source-specific 10.3%; pooled 41.1%).",
       "Within the source-specific tier, no growth was higher in synovial or joint fluid (55.1%; "
-      "50.8-59.7) than in implant sonicate (24.5%; 18.4-30.6) (Fig. 1b). The direction is "
-      "consistent with the reported advantage of sonication over aspiration [13-15], but these are "
-      "not paired specimens from the same joint and infection is not criterion-confirmed, so no "
-      "comparative sensitivity can be inferred."]),
+      "50.8-59.7) than in implant sonicate (24.5%; 18.4-30.6) (Fig. 1b)."]),
 
-    ("Within episodes, no per-specimen effect of the label is demonstrable",
-     ["The between-cohort contrasts above compare different patients. In the 487 episodes (421 "
-      "patients) that contributed both a source-specific and a generic evaluable specimen, the "
-      "patient and admission are held fixed. The two tiers still differ in how much they "
-      "contribute: the median episode supplied 1 evaluable source-specific specimen and 3 "
-      "generic ones.",
+    ("Within-episode analyses did not detect a per-specimen association with label tier",
+     ["In the 487 episodes (421 patients) that contributed both a source-specific and a generic "
+      "evaluable specimen, the patient and admission are held fixed. The two tiers differ in how "
+      "much they contribute: the median episode supplied 1 evaluable source-specific specimen and "
+      "3 generic ones.",
       "Counting a tier as negative for an episode only when every one of its evaluable specimens "
       "grew nothing, the source-specific tier was entirely negative in 198 of 487 episodes "
       "(40.7%) and the generic tier in 154 of 487 (31.6%), a paired difference of 9.0 percentage "
@@ -275,11 +265,10 @@ RESULTS = [
       "were entirely negative on both tiers and 237 had at least one positive specimen in each; "
       "of the 148 discordant episodes, 96 were entirely negative only on the source-specific tier "
       "and 52 only on the generic tier (Fig. 1d). This episode-level difference runs in the same "
-      "direction as the between-cohort comparison rather than against it.",
-      "That episode-level difference is not, however, evidence about the labels, because a tier "
-      "contributing one specimen is more easily entirely negative than a tier contributing three. "
-      "Two analyses that remove this dependence did not detect a statistically significant "
-      "within-episode association. An episode-stratified conditional logistic model uses only "
+      "direction as the between-cohort comparison.",
+      "Two further analyses, which do not depend on how many specimens each tier contributed, did "
+      "not detect a statistically significant within-episode association. An episode-stratified "
+      "conditional logistic model uses only "
       "within-episode variation and conditions out every episode-level characteristic; episodes "
       "whose specimens do not vary in both outcome and tier contribute nothing to the conditional "
       "likelihood, so the estimate rests on 1227 specimens in 252 informative episodes from 233 "
@@ -290,17 +279,11 @@ RESULTS = [
       "evaluable specimen in each tier, and where the two are matched one to one by construction, "
       "25 were negative only on the source-specific specimen and 14 only on the generic one "
       "(exact McNemar P = .11).",
-      "Taken together, the within-episode analyses do not detect a per-specimen association "
-      "between the specimen label and yield, and their intervals are too wide to exclude one of "
-      "the size seen between cohorts; they establish non-detection, not equivalence. The large "
-      "between-cohort differences therefore cannot be attributed to the label on this evidence, "
-      "but neither can they be cleanly attributed to case selection; what these data establish "
-      "is that the estimates depend on which labels are analysed, not why. The full paired "
-      "cohort, both inference approaches and the retained conditional sample are tabulated in "
-      "Online Resource 1, eTable 13."]),
+      "The full paired cohort, both inference approaches and the retained conditional sample are "
+      "tabulated in Online Resource 1, eTable 12."]),
 
     ("Deduplication scope and low-resolution growth",
-     ["Two further conventions moved the numbers materially. Scoping the first-isolate rule "
+     ["Scoping the first-isolate rule "
       "within the tier being analysed, rather than across every culture in the admission, changed "
       "the source-specific isolate count by 43%: 175 of 395 episode-first source-specific "
       "isolates (43.2%) had been preceded by the same organism on a blood, urine, swab or generic "
@@ -317,29 +300,25 @@ RESULTS = [
       "at 48.2% of 510 unduplicated isolates, 45.3% of 395 first isolates per episode (179 of "
       "395; 39.9-50.9) and 43.3% of 367 first isolates per patient (Table 2, Fig. 2). "
       "Coagulase-negative staphylococci (15.7%), streptococci (11.4%) and Cutibacterium (3.3%) "
-      "followed under the episode-first rule; the Cutibacterium fraction should be read as a "
-      "floor, because recovery depends on incubation length, which these data do not record [7]. "
+      "followed under the episode-first rule. "
       "The pooled tier gives a different spectrum, with S. aureus at 29.0% of 4547 episode-first "
       "isolates and a larger contribution from enterococci, anaerobes and gram-negative "
-      "organisms, consistent with generic tissue specimens drawing on a soft-tissue flora.",
+      "organisms.",
       "Across all deep specimens, 43.2% of 1143 S. aureus isolates with an interpretable "
       "oxacillin result were resistant; restricting to first isolates gave 43.0% per episode (353 "
       "of 820; 39.3-46.6) and 40.5% per patient (274 of 676; 36.8-44.2) (Table 3). Erythromycin "
       "resistance was highest in the panel (60.5%; 56.9-63.9), followed by levofloxacin (40.2%) "
       "and clindamycin (39.7%); resistance was low to tetracycline (9.4%), trimethoprim-"
       "sulfamethoxazole (3.2%), rifampin (3.2%) and gentamicin (2.2%), and no isolate was "
-      "vancomycin-resistant (0 of 364, upper 97.5% bound 1.1% on the contributing patients; no "
-      "observed resistance does not establish zero population risk). In the gram-negative panel "
+      "vancomycin-resistant (0 of 364, upper 97.5% bound 1.1% on the contributing patients). "
+      "In the gram-negative panel "
       "resistance was highest to ciprofloxacin (23.7%; 20.5-27.2) and trimethoprim-"
       "sulfamethoxazole (23.5%) and lowest to meropenem (3.9%; 2.6-5.4) and tobramycin (6.1%) "
       "(Table 4, Fig. 3).",
-      "The methicillin-resistance fraction is high relative to European arthroplasty series and is "
-      "not explained by intensive-care case mix: only 15.8% of episodes involved an intensive care "
-      "stay, and oxacillin resistance was 44.5% in intensive-care-linked episodes against 42.8% in "
-      "the remainder (odds ratio, 1.07; 0.74-1.56; P = .70). Across anchor-year groups it fell from "
-      "46.0% (2008-2010) to 35.4% (2020-2022) without reaching significance (omnibus P = .48). A "
-      "single figure pooled over the database span is not a contemporary benchmark, and we do not "
-      "offer one."]),
+      "Only 15.8% of episodes involved an intensive care stay, and oxacillin resistance was 44.5% "
+      "in intensive-care-linked episodes against 42.8% in the remainder (odds ratio, 1.07; "
+      "0.74-1.56; P = .70). Across anchor-year groups it fell from 46.0% (2008-2010) to 35.4% "
+      "(2020-2022) without reaching significance (omnibus P = .48)."]),
 
     ("Exploratory infection-type contrast",
      ["Within the source-specific tier, no growth was higher in native osteomyelitis (61.7%; "
@@ -351,10 +330,7 @@ RESULTS = [
       "remained statistically significant after correction, including sex (odds ratio for male "
       "sex, 0.80; 0.58-1.12; P = .19). Complete coefficients, reference categories, denominators, "
       "event counts, and raw and adjusted P values are given in Online Resource 1, eTable 11.",
-      "This contrast should be read as exploratory. Only 167 osteomyelitis episodes contributed a "
-      "source-specific specimen, no bone-specific label exists here, and joint fluid obtained "
-      "during an osteomyelitis-coded admission need not come from the infected bone. We report it "
-      "because it is prespecified, not as a finding about the biology of osteomyelitis."]),
+      "Only 167 osteomyelitis episodes contributed a source-specific specimen."]),
 ]
 
 DISCUSSION = [
@@ -365,7 +341,7 @@ DISCUSSION = [
     "reader given only a pooled figure would not know either number existed.",
 
     "The obvious inference is that the labels themselves behave differently, and the data do not "
-    "support it. Restricting to the 487 episodes that supplied both kinds of specimen holds the "
+    "establish it. Restricting to the 487 episodes that supplied both kinds of specimen holds the "
     "patient and admission fixed. There the source-specific tier was entirely negative more often "
     "than the generic tier, in the same direction as the between-cohort comparison; but that "
     "episode-level contrast is confounded by how much each tier contributes, since a tier "
@@ -374,7 +350,7 @@ DISCUSSION = [
     "analyses that remove that dependence, an episode-stratified conditional logistic model and a "
     "one-to-one matched subset, did not detect a significant association (odds ratio 0.86, 95% CI "
     "0.64-1.15 with patient-clustered uncertainty; and 25 versus 14 discordant episodes, "
-    "P = .11). Within a patient we therefore cannot demonstrate that a source-specific label "
+    "P = .11). Within an episode we therefore cannot demonstrate that a source-specific label "
     "yields a different per-specimen result from a generic one, though neither can we exclude it: "
     "the conditional estimate rests on 252 informative episodes and its interval still admits "
     "effects of clinically relevant size.",
@@ -416,6 +392,15 @@ DISCUSSION = [
     "and the timing of the first antimicrobial dose relative to sampling is the single most "
     "informative field these data lack; we make no claim about it.",
 
+    "Three of the reported quantities need reading with care. The Cutibacterium fraction is a lower "
+    "bound rather than an estimate, because recovery depends on incubation length and these data do "
+    "not record it [7]. No vancomycin resistance was observed, which does not establish zero "
+    "population risk; the upper bound on the contributing patients is the interpretable quantity. "
+    "And the osteomyelitis-versus-prosthetic-joint-infection contrast is exploratory: only 167 "
+    "osteomyelitis episodes contributed a source-specific specimen, no bone-specific label exists "
+    "in this database, and joint fluid obtained during an osteomyelitis-coded admission need not "
+    "come from the infected bone.",
+
     "This study has clear limitations, several of which are the object of study rather than "
     "incidental to it. The most important is that we address specimen-category specificity without "
     "resolving infection attribution. Even a source-specific label does not establish that the "
@@ -444,8 +429,8 @@ DISCUSSION = [
     "In re-runnable data, the culture-based description of code-defined bone and joint infection is "
     "not a single set of numbers but a family of them, indexed by decisions about which specimen "
     "labels are admitted, how isolates are deduplicated and how unspeciated growth is counted. "
-    "Those decisions move the headline quantities by more than most of the biological contrasts "
-    "such studies report, and a within-patient comparison does not show that the label itself "
+    "Those decisions moved the headline quantities materially, "
+    "and within-episode analyses do not show that the label itself "
     "produces the difference. We report the family rather than one member of it, and provide the "
     "code and dictionaries so others can substitute their own rules and see what changes.",
 ]
@@ -533,19 +518,19 @@ DECLARATIONS = [
      "disclose."),
     ("Ethics approval", "This study was performed in line with the principles of the Declaration "
      "of Helsinki. It is a secondary analysis of an existing, fully de-identified, publicly "
-     "available database (MIMIC-IV version 3.1). The collection and sharing of MIMIC-IV were "
+     "credentialed-access database (MIMIC-IV version 3.1). The collection and sharing of MIMIC-IV were "
      "approved by the institutional review board of the Beth Israel Deaconess Medical Center, "
      "which granted a waiver of informed consent for that resource. That approval covers the "
      "source database rather than this particular analysis; no study-specific ethical review was "
-     "sought or required for secondary use of de-identified public data."),
-    ("Consent to participate", "Not applicable. The study used a de-identified public database "
+     "sought or required for secondary use of the de-identified database under its data use "
+     "agreement."),
+    ("Consent to participate", "Not applicable. The study used a de-identified, credentialed-access database "
      "for which a waiver of informed consent was granted; no individual participants were "
      "recruited or contacted."),
     ("Consent to publish", "Not applicable. The manuscript contains no data, images or details "
      "relating to an identifiable individual."),
     ("Data availability", "MIMIC-IV version 3.1 is available to credentialed users under a data "
      "use agreement from PhysioNet (https://doi.org/10.13026/kpb9-mt58). All analysis code, "
-     "dictionaries and derived summary outputs required to reproduce every number, table and "
-     "figure are publicly archived (https://doi.org/10.5281/zenodo.21268251)."),
+     "dictionaries required to reproduce the reported analyses are publicly archived (https://doi.org/10.5281/zenodo.21268251)."),
     ("Code availability", "See Data availability."),
 ]

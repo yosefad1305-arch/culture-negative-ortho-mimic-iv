@@ -188,15 +188,15 @@ for key, num in [("table1", 1), ("table2", 2), ("table3", 3), ("table4", 4)]:
 doc.add_page_break()
 h(doc, "Figures", before=0)
 # Figures are placed in the manuscript, as the journal prefers, and are also supplied as separate
-# 600 dpi PNG and vector PDF files. Each is inserted at the journal's full text width (174 mm) so
-# no reduction is applied in production.
+# 600 dpi PNG and vector PDF files at the journal's 174 mm production width. In this A4 document
+# they are inserted at 16.0 cm, the usable text width between 2.5 cm margins, so nothing overruns.
 for (tag, body), stem in zip(M.FIGURE_LEGENDS, ["Fig1", "Fig2", "Fig3"]):
     png = os.path.join(FIG, f"{stem}.png")
     if os.path.exists(png):
         pic = doc.add_paragraph()
         pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
         pic.paragraph_format.line_spacing = 1.0
-        pic.add_run().add_picture(png, width=Cm(17.4))
+        pic.add_run().add_picture(png, width=Cm(16.0))
     p = doc.add_paragraph()
     p.paragraph_format.line_spacing = 1.0
     p.add_run(f"{tag} ").bold = True
@@ -235,11 +235,10 @@ CONTENTS = [(tag, title) for _, tag, title in etables] + [
     ("eTable 6", "Diagnosis codes defining the cohort"),
     ("eTable 7", "Rules assigning a culture result status"),
     ("eTable 8", "Organism normalisation dictionary"),
-    ("eTable 9", "Audit sample of classified specimens"),
-    ("eTable 10", "Software environment"),
-    ("eTable 11", "Complete patient-clustered logistic model output"),
-    ("eTable 12", "Exact versus patient-clustered confidence intervals"),
-    ("eTable 13", "Within-episode comparison of specimen label tiers (primary comparison)"),
+    ("eTable 9", "Software environment"),
+    ("eTable 10", "Complete patient-clustered logistic model output"),
+    ("eTable 11", "Exact versus patient-clustered confidence intervals"),
+    ("eTable 12", "Within-episode comparison of specimen label tiers (primary comparison)"),
 ]
 for tag, title in CONTENTS:
     para(sup, f"{tag}. {title}", size=11)
@@ -291,22 +290,11 @@ add_table(sup, dict(
     header=["Laboratory organism string", "Reporting group", "Broad group"],
     rows=[[a, str(b), str(c)] for a, b, c in odict]), font_size=7)
 
-# ---- eTable 9: audit sample
-sup.add_page_break()
-vs = pd.read_csv(os.path.join(OUT, "validation_sample.csv"))
-vs["comments"] = vs.comments.fillna("").str.slice(0, 200)
-add_table(sup, dict(
-    caption=("eTable 9. Audit sample of classified specimens, drawn at random within each result "
-             "status (up to 25 per status), showing the laboratory comment text against which "
-             "the classification can be checked."),
-    header=["Specimen label", "Tier", "Status", "Organisms", "Laboratory comment (truncated)"],
-    rows=[[r.spec_type_desc, {"strict": "Source-specific", "generic": "Generic"}.get(str(r.tier), str(r.tier)), r.result_status, str(r.orgname_list)[:60],
-           r.comments] for r in vs.itertuples()]), font_size=7)
 
 # ---- eTable 10: software versions
 sup.add_page_break()
 add_table(sup, dict(
-    caption="eTable 10. Software environment. Analyses used fixed random seeds throughout.",
+    caption="eTable 9. Software environment. Analyses used fixed random seeds throughout.",
     header=["Component", "Version"],
     rows=[["Python", platform.python_version()],
           ["pandas", pd.__version__], ["numpy", np.__version__],
@@ -317,8 +305,8 @@ add_table(sup, dict(
 
 # ---- eTables 11-12: model output and interval comparison
 sup.add_page_break()
-for key, tag in [("etable_regression", "eTable 11"), ("etable_exact", "eTable 12"),
-                 ("etable_within", "eTable 13")]:
+for key, tag in [("etable_regression", "eTable 10"), ("etable_exact", "eTable 11"),
+                 ("etable_within", "eTable 12")]:
     spec = dict(T[key])
     if not spec["caption"].startswith("eTable"):
         spec["caption"] = f"{tag}. {spec['caption']}"

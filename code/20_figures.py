@@ -175,7 +175,7 @@ if sparse:
             mec=BLUE, mew=1.4, ms=6, ls="none", zorder=4)
     for i in sparse:
         ax.annotate("CI not\nestimable", (xs[i], est[i]), textcoords="offset points",
-                    xytext=(0, -30), ha="center", fontsize=7, color="#6B7280")
+                    xytext=(0, -30), ha="center", fontsize=8, color="#6B7280")
 ax.set_xticks(xs)
 ax.set_xticklabels(gk)
 ax.set_xlabel("Evaluable source-specific specimens per episode")
@@ -207,19 +207,23 @@ ax.axvline(0, color="#9CA3AF", lw=0.9, ls="--", zorder=2)
 ax.errorbar([d], [0], xerr=[[d - lo_d], [hi_d - d]], fmt="o", color=BLUE, ecolor="#2B2B2B",
             elinewidth=1.2, capsize=4, ms=7, zorder=4)
 ax.set_yticks([0])
-ax.set_yticklabels(["Episode entirely\nnegative"], fontsize=8)
-ax.set_ylim(-0.9, 1.5)
+ax.set_yticklabels(["Episode\nentirely\nnegative"], fontsize=8)
+ax.set_ylim(-0.75, 0.75)
 ax.set_xlim(-6, 20)
 ax.set_xlabel("Paired difference, source-specific minus generic\n(percentage points)", fontsize=8)
-ax.text(d, 0.42, f"{d:+.1f} ({lo_d:+.1f} to {hi_d:+.1f})", ha="center", fontsize=8,
+# Estimate label sits just above the marker, in data coordinates so it tracks the point.
+ax.text(d, 0.16, f"{d:+.1f} ({lo_d:+.1f} to {hi_d:+.1f})", ha="center", va="bottom", fontsize=8,
         color="#2B2B2B")
-ax.text(-5.4, 1.24, f"{n_ep:,} episodes sampled both ways; "
-        f"{pt['strict_all_negative_only']:,} vs {pt['generic_all_negative_only']:,} discordant",
-        ha="left", va="top", fontsize=7, color="#6B7280")
-if "or_" in cl:
-    ax.text(-5.4, 0.96, f"episode-stratified per-specimen OR {cl['or_']:.2f} "
-            f"({cl['ci'][0]:.2f}-{cl['ci'][1]:.2f})",
-            ha="left", va="top", fontsize=7, color="#6B7280")
+# Sample note is anchored in AXES coordinates and right-aligned inside the frame, so it cannot
+# run past the spine however the x-limits change. The discordant split and the conditional odds
+# ratio live in the caption; repeating them here overran the panel.
+ax.text(0.97, 0.04, f"n = {n_ep:,} episodes", transform=ax.transAxes, ha="right", va="bottom",
+        fontsize=8, color="#6B7280")
+# Favours-which-side cues, also in axes coordinates.
+ax.text(0.02, 0.96, "generic\nmore often\nnegative", transform=ax.transAxes, ha="left", va="top",
+        fontsize=7.5, color="#9CA3AF", linespacing=1.2)
+ax.text(0.98, 0.96, "source-specific\nmore often\nnegative", transform=ax.transAxes, ha="right",
+        va="top", fontsize=7.5, color="#9CA3AF", linespacing=1.2)
 faint_grid(ax, "x")
 panel(ax, "d")
 
@@ -243,7 +247,7 @@ ax.set_xlabel("Isolates reported resistant (%)", fontsize=8)
 ax.set_xlim(0, 96)
 ax.tick_params(labelsize=8)
 for yi, k in zip(np.arange(len(sa_keys))[::-1], sa_keys):
-    ax.text(95, yi, f"{sa[k]['n']:,}", va="center", ha="right", fontsize=7, color="#6B7280")
+    ax.text(95, yi, f"{sa[k]['n']:,}", va="center", ha="right", fontsize=8, color="#6B7280")
 panel(ax, "a")
 
 gn = D["amr"]["pooled|first_isolate_episode|gramneg"]
@@ -255,7 +259,7 @@ ax.set_xlabel("Isolates reported resistant (%)", fontsize=8)
 ax.set_xlim(0, 96)
 ax.tick_params(labelsize=8)
 for yi, k in zip(np.arange(len(gn_keys))[::-1], gn_keys):
-    ax.text(95, yi, f"{gn[k]['n']:,}", va="center", ha="right", fontsize=7, color="#6B7280")
+    ax.text(95, yi, f"{gn[k]['n']:,}", va="center", ha="right", fontsize=8, color="#6B7280")
 panel(ax, "b")
 
 era = {k: v for k, v in D["era_mrsa"].items() if k != "trend_test"}
@@ -276,7 +280,7 @@ ax.set_ylabel("Oxacillin-resistant\nS. aureus (%)", fontsize=8)
 ax.set_ylim(0, 78)
 ax.tick_params(labelsize=8)
 for xi, b in zip(xs, blocks):
-    ax.text(xi, 72, f"{b['n']:,}", ha="center", fontsize=7.5, color="#6B7280")
+    ax.text(xi, 72, f"{b['n']:,}", ha="center", fontsize=8, color="#6B7280")
 faint_grid(ax, "y")
 panel(ax, "c")
 save(fig, os.path.join(FIG, "Fig3"))

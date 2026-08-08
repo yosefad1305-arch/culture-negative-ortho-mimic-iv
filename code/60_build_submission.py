@@ -224,10 +224,12 @@ ITEMS = [
      "No formal validation study was performed. There is no blinded reference standard, and no "
      "sensitivity, specificity, predictive value or agreement statistic is reported, because no "
      "criterion standard for specimen provenance or infection status exists in this database. "
-     "What is provided is an audit: the classification rules are stated in full (Methods, "
-     "Culture result status; Online Resource 1, eTable 7) and a random sample of classified "
-     "specimens is printed with the laboratory comment text against which each classification "
-     "can be checked (Online Resource 1, eTable 9)"),
+     "What is provided instead is a published rule set: the classification rules are stated "
+     "in full in Methods, Culture result status and in Online Resource 1, eTable 7, and are "
+     "released as executable code with their own self-tests (result_map.py, spec_map.py, "
+     "org_map.py). The number of specimens each rule assigns to each status is reported in "
+     "aggregate in Results, Cohort and specimen accounting, and in Online Resource 1, eTable 2. No row-level extract of the source data is reproduced, because MIMIC-IV is "
+     "credentialed and may be redistributed only through PhysioNet"),
     ("RECORD 6.3", "If validation was conducted for this study, provide the results",
      "Not applicable", "No validation study was conducted; see item 6.2. The accounting of how "
      "many specimens each rule excluded is given in Results, Cohort and specimen accounting, and "
@@ -250,8 +252,8 @@ ITEMS = [
     ("12a", "Describe all statistical methods, including those used to control for confounding",
      "Reported", "Methods, Statistical analysis"),
     ("12b", "Describe any methods used to examine subgroups and interactions",
-     "Reported", "Methods, Statistical analysis; Results, Within episodes, no per-specimen "
-     "effect of the label is demonstrable"),
+     "Reported", "Methods, Statistical analysis; Results, Within-episode analyses did not detect a "
+     "per-specimen association with label tier"),
     ("12c", "Explain how missing data were addressed",
      "Reported", "Methods, Culture result status (indeterminate and cancelled tests excluded and "
      "counted); Online Resource 1, eTable 2"),
@@ -277,13 +279,14 @@ ITEMS = [
      "Reported", "Results, all subsections; Tables 2-4; Figs. 1-3"),
     ("16", "Give unadjusted estimates and, if applicable, confounder-adjusted estimates and their "
      "precision", "Reported", "Results, Exploratory infection-type contrast "
-     "(models with and without adjustment for specimen count); Results, Within episodes, no "
-     "per-specimen effect of the label is demonstrable (episode-stratified conditional model and "
+     "(models with and without adjustment for specimen count); Results, Within-episode analyses did not "
+     "detect a per-specimen association with label tier (episode-stratified conditional model and "
      "one-to-one matched subset); all proportions carry "
      "patient-clustered 95% CIs"),
     ("17", "Report other analyses done", "Reported",
-     "Results, Resistance and the effect of repeated isolates (era and intensive-care "
-     "stratification); Online Resource 1, eTables 3-5"),
+     "Results, Organism spectrum and resistance (era and intensive-care stratification); Results, "
+     "Within-episode analyses did not detect a per-specimen association with label tier; Online "
+     "Resource 1, eTables 3-5 and 12"),
     ("RECORD 13.1", "Describe in detail the selection of the persons included in the study and "
      "the reasons for exclusion", "Reported",
      "Methods, Cohort; Results, Cohort and specimen accounting"),

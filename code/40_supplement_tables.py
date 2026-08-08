@@ -240,7 +240,7 @@ for key in ["no_growth_infection_type_only", "no_growth_unadjusted_for_sampling"
             fmt_p(v["p"]) + (f" / {fmt_p(v['p_bh'])}" if "p_bh" in v else " / -")])
 
 T["etable_regression"] = dict(
-    caption=("eTable 11. Complete output of the patient-clustered logistic models for no growth "
+    caption=("eTable 10. Complete output of the patient-clustered logistic models for no growth "
              "in the source-specific tier. Odds ratios carry cluster-robust 95% confidence intervals. P "
              "values are given as raw / Benjamini-Hochberg adjusted within each model; a dash "
              "indicates that multiplicity correction was not applied to that model."),
@@ -265,14 +265,14 @@ for name, blk in [("No growth, source-specific tier", D["no_growth"]["strict"]),
         f"{blk['clustered_ci'][0]*100:.1f}-{blk['clustered_ci'][1]*100:.1f}",
         f"{blk['n_clusters']:,}"])
 T["etable_exact"] = dict(
-    caption=("eTable 12. Naive exact (Clopper-Pearson) intervals alongside the patient-clustered "
+    caption=("eTable 11. Naive exact (Clopper-Pearson) intervals alongside the patient-clustered "
              "bootstrap intervals used for inference, showing the cost of ignoring clustering. "
              "Exact intervals are provided for reference only."),
     header=["Estimate", "Events/total", "%", "Exact 95% CI", "Patient-clustered 95% CI",
             "Patients"],
     rows=exact_rows)
 
-# ---------------------------------------------------------------- eTable 13: primary analysis
+# ---------------------------------------------------------------- eTable 12: primary analysis
 w = D["within_episode"]
 pt13 = w["paired_table"]
 ptst = w["paired_test"]
@@ -358,7 +358,7 @@ if _sens:
          f"P = {fmt_p(_sens['p'])}"])
 
 T["etable_within"] = dict(
-    caption=("eTable 13. Within-episode comparison of specimen label tiers, the study's primary "
+    caption=("eTable 12. Within-episode comparison of specimen label tiers, the study's primary "
              "comparison, reported in full. A tier counts as negative for an episode only when "
              "every one of its evaluable specimens grew nothing. Percentages are of the paired "
              "cohort unless stated otherwise."),

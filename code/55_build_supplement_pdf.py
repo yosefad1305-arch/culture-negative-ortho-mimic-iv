@@ -106,11 +106,10 @@ CONTENTS = [(tag, title) for _, tag, title, _ in ETABLES] + [
     ("eTable 6", "Diagnosis codes defining the cohort"),
     ("eTable 7", "Rules assigning a culture result status"),
     ("eTable 8", "Organism normalisation dictionary"),
-    ("eTable 9", "Audit sample of classified specimens"),
-    ("eTable 10", "Software environment"),
-    ("eTable 11", "Complete patient-clustered logistic model output"),
-    ("eTable 12", "Exact versus patient-clustered confidence intervals"),
-    ("eTable 13", "Within-episode comparison of specimen label tiers (primary comparison)"),
+    ("eTable 9", "Software environment"),
+    ("eTable 10", "Complete patient-clustered logistic model output"),
+    ("eTable 11", "Exact versus patient-clustered confidence intervals"),
+    ("eTable 12", "Within-episode comparison of specimen label tiers (primary comparison)"),
 ]
 for tag, title in CONTENTS:
     story.append(Paragraph(f"{tag}. {title}", BODY))
@@ -168,24 +167,11 @@ story += table_flow(dict(
     header=["Laboratory organism string", "Reporting group", "Broad group"],
     rows=[[a, str(b), str(c)] for a, b, c in odict]), [2.2, 1.6, 1.0])
 
-# eTable 9: audit sample
-story.append(PageBreak())
-vs = pd.read_csv(os.path.join(OUT, "validation_sample.csv"))
-vs["comments"] = vs.comments.fillna("").str.slice(0, 220)
-TIER = {"strict": "Source-specific", "generic": "Generic"}
-story += table_flow(dict(
-    caption=("eTable 9. Audit sample of classified specimens, drawn at random within each result "
-             "status (up to 25 per status), showing the laboratory comment text against which the "
-             "classification can be checked."),
-    header=["Specimen label", "Tier", "Status", "Organisms", "Laboratory comment (truncated)"],
-    rows=[[r.spec_type_desc, TIER.get(str(r.tier), str(r.tier)), r.result_status,
-           str(r.orgname_list)[:60], r.comments] for r in vs.itertuples()]),
-    [1.0, 0.8, 0.8, 1.2, 2.6])
 
 # eTable 10: software
 story.append(PageBreak())
 story += table_flow(dict(
-    caption="eTable 10. Software environment. Analyses used fixed random seeds throughout.",
+    caption="eTable 9. Software environment. Analyses used fixed random seeds throughout.",
     header=["Component", "Version"],
     rows=[["Python", platform.python_version()],
           ["pandas", pd.__version__], ["numpy", np.__version__],

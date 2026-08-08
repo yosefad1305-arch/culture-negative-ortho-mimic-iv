@@ -17,6 +17,8 @@ from paths import OUT
 D = json.load(open(os.path.join(OUT, "results_digest.json"), encoding="utf-8"))
 S = json.load(open(os.path.join(OUT, "stats_digest.json"), encoding="utf-8"))
 
+RESULTS_TEXT = " ".join(t for _, ps in M.RESULTS for t in ps)
+
 FULL = " ".join(
     [M.TITLE] + [b for _, b in M.ABSTRACT] + M.INTRODUCTION + M.DISCUSSION
     + [t for _, ps in M.METHODS for t in ps] + [t for _, ps in M.RESULTS for t in ps]
@@ -283,8 +285,7 @@ icu = D["icu_mrsa"]["clustered_logit"]["coefficients"]["icu"]
 if abs(icu["or_"] - 1.07) > 0.006 or abs(icu["p"] - 0.70) > 0.006:
     fails.append(f"ICU logit OR {icu['or_']:.3f} P {icu['p']:.3f} vs text 1.07 / .70")
 claim("odds ratio, 1.07; 0.74-1.56; P = .70")
-claim("only 15.8% of episodes involved an intensive "
-      "care stay")
+claim("Only 15.8% of episodes involved an intensive care stay")
 est("era_mrsa::2008 - 2010", 46.0)
 est("era_mrsa::2020 - 2022", 35.4)
 claim("46.0% (2008-2010) to 35.4% (2020-2022)")
@@ -326,7 +327,21 @@ if any(m[k]["p_bh"] <= 0.05 for k in socio):
 claim("No sociodemographic coefficient "
       "remained statistically significant after correction")
 # The infection-type contrast must be labelled exploratory.
-claim("This contrast should be read as exploratory")
+claim("contrast is exploratory: only 167 "
+      "osteomyelitis episodes contributed a source-specific specimen")
+# Results must not carry interpretation; these phrases belong in the Discussion. Checked
+# against the Results text only, because several of them legitimately appear there.
+for _interp in ["Reporting the pooled value alone", "organism-string handling is not what",
+                "should be read as a floor", "does not establish zero population risk",
+                "This contrast should be read as exploratory",
+                "consistent with the reported advantage", "soft-tissue flora",
+                "not explained by intensive-care case mix", "Taken together"]:
+    checks += 1
+    if _interp in RESULTS_TEXT:
+        fails.append(f"interpretation in Results: {_interp!r}")
+# Prespecification is not claimed without a dated protocol.
+for _pp in ["a priori", "prespecified rule", "because it is prespecified"]:
+    claim(_pp, present=False)
 
 # ---- claims that must NOT be present
 for banned in ["AUROC", "area under the receiver", "anticipat", "TRIPOD",
@@ -357,12 +372,12 @@ try:
     import json as _json
     _T = _json.load(open(os.path.join(OUT, "tables.json"), encoding="utf-8"))
     if "etable_within" not in _T:
-        fails.append("eTable 13 (within-episode primary analysis) missing from tables.json")
+        fails.append("eTable 12 (within-episode primary analysis) missing from tables.json")
     else:
         _flat = " ".join(" ".join(map(str, r)) for r in _T["etable_within"]["rows"])
         for _need in ["487", "102", "237", "96", "52", "1,227", "252", "233", "0.86"]:
             if _need not in _flat:
-                fails.append(f"eTable 13 does not report {_need}")
+                fails.append(f"eTable 12 does not report {_need}")
 except FileNotFoundError:
     fails.append("tables.json not found; run 40_supplement_tables.py first")
 checks += 1
@@ -379,6 +394,19 @@ checks += 1
 if not any("M39" in r for r in M.REFERENCES):
     fails.append("CLSI M39 is cited in Methods but absent from the reference list")
 claim("document M39 [16]")
+
+
+# ---- data governance: no row-level extract of the credentialed source data may be written
+checks += 1
+_forbidden = [f for f in os.listdir(OUT)
+              if f.lower().endswith((".csv", ".parquet", ".dta", ".xlsx"))]
+if _forbidden:
+    fails.append(f"row-level or tabular data written to the output root: {_forbidden}. "
+                 "MIMIC-IV may be redistributed only through PhysioNet.")
+checks += 1
+for _banned_word in ["validation_sample", "audit sample of classified specimens"]:
+    if _banned_word.lower() in FULL.lower():
+        fails.append(f"manuscript references a published row-level sample: {_banned_word!r}")
 
 print(f"{checks} checks run")
 if fails:

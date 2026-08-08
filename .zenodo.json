@@ -1,0 +1,52 @@
+{
+  "upload_type": "software",
+  "title": "Specimen-label cohorts and culture estimates in code-defined bone and joint infection: a MIMIC-IV measurement study (analysis code)",
+  "description": "<p>Analysis code reproducing every number, table and figure in the manuscript &ldquo;Specimen-label cohorts and culture estimates in code-defined bone and joint infection: a MIMIC-IV measurement study&rdquo;.</p><p>The study measures how far culture-based estimates in code-defined orthopaedic infection depend on which specimen labels are analysed. Specimen labels are split into a source-specific tier (joint fluid, prosthetic joint fluid, explicit sonication) and a generic tier (tissue, biopsy, undifferentiated foreign body). No growth requires a laboratory-reported completed routine bacterial culture. First-isolate flags are scoped within each tier. The primary comparison is made within episodes that contributed both tiers, using patient-clustered inference and an episode-stratified conditional logistic model.</p><p>MIMIC-IV is credentialed and is not redistributed here. No patient-level data are included. See DATA_ACCESS.md for how to obtain the source database from PhysioNet.</p><p>Run <code>python run_all.py</code> to reproduce all outputs; <code>code/99_audit.py</code> asserts every quantity reported in the manuscript against the generated digests and exits non-zero on any mismatch.</p>",
+  "license": "MIT",
+  "access_right": "open",
+  "creators": [
+    {
+      "name": "Adiniaev, Yosef",
+      "affiliation": "Faculty of Medicine, University of Debrecen, Debrecen, Hungary",
+      "orcid": "0009-0002-7678-633X"
+    },
+    {
+      "name": "Gorenshtein, Alon",
+      "affiliation": "Beth Israel Deaconess Medical Center, Boston, MA, USA",
+      "orcid": "0009-0000-7542-8608"
+    },
+    {
+      "name": "Timor, Tohar M",
+      "affiliation": "Faculty of Medicine, University of Debrecen, Debrecen, Hungary",
+      "orcid": "0009-0000-9842-1636"
+    },
+    {
+      "name": "Klang, Eyal",
+      "affiliation": "Beth Israel Deaconess Medical Center, Harvard Medical School, Boston, MA, USA",
+      "orcid": "0000-0002-4567-3108"
+    },
+    {
+      "name": "Geftler, Alexander",
+      "affiliation": "Department of Orthopedic Surgery, Soroka Medical Center, Beer Sheva, Israel",
+      "orcid": "0000-0002-5175-2013"
+    }
+  ],
+  "keywords": [
+    "prosthetic joint infection",
+    "osteomyelitis",
+    "culture-negative infection",
+    "antimicrobial resistance",
+    "electronic health records",
+    "measurement bias",
+    "MIMIC-IV",
+    "reproducibility"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://doi.org/10.13026/kpb9-mt58",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset",
+      "scheme": "doi"
+    }
+  ]
+}

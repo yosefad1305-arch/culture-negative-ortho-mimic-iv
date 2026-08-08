@@ -739,21 +739,22 @@ D["diagnostic_intensity"] = di
 
 # ------------------------------------------------------------------ validation sample
 p("\n" + "=" * 90)
-p("VALIDATION SAMPLE (reviewer item 2: auditable classification sample)")
+p("CLASSIFICATION ACCOUNTING (aggregate only)")
 p("=" * 90)
-val = spec[spec.is_deep_msk & spec.has_bacterial_culture].copy()
-samp = pd.concat([g.sample(min(len(g), 25), random_state=SEED)
-                  for _, g in val.groupby("result_status")], ignore_index=True)
-mic_comments = pd.read_parquet(os.path.join(INT, "micro_raw_cohort.parquet"),
-                               columns=["micro_specimen_id", "test_name", "comments"])
-samp_out = samp[["micro_specimen_id", "spec_type_desc", "tier", "result_status",
-                 "orgname_list"]].merge(
-    mic_comments.groupby("micro_specimen_id").comments.apply(
-        lambda s: " || ".join(sorted({str(x)[:120] for x in s.dropna()}))[:400]),
-    on="micro_specimen_id", how="left")
-samp_out.to_csv(os.path.join(OUT, "validation_sample.csv"), index=False)
-p(f"  wrote {len(samp_out)} sampled specimens to output/validation_sample.csv")
-D["validation_sample_n"] = int(len(samp_out))
+p("No row-level excerpt of the source data is written. MIMIC-IV is credentialed, and specimen "
+  "identifiers with verbatim laboratory comment text are restricted data that may be shared only "
+  "through PhysioNet under its data use agreement. Earlier versions of this script emitted a "
+  "sampled listing of classified specimens for audit; that listing has been removed. The "
+  "classification rules are published in full as code (result_map.py, spec_map.py, org_map.py), "
+  "each with its own self-tests, and the counts each rule produces are reported in aggregate "
+  "below and in the specimen accounting table.")
+
+val = spec[spec.is_deep_msk & spec.has_bacterial_culture]
+counts = val.result_status.value_counts().to_dict()
+D["classification_counts_deep"] = {k: int(v) for k, v in counts.items()}
+for k, v in sorted(counts.items()):
+    p(f"  {k:15s} {int(v):6,} ({v / len(val):.2%})")
+p(f"  {'total':15s} {len(val):6,}")
 
 # ------------------------------------------------------------------ save
 D["_meta"] = dict(seed=SEED, n_boot=N_BOOT,

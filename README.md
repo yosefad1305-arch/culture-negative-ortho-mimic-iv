@@ -12,9 +12,9 @@ Code to reproduce every number, table and figure in:
 Culture-based descriptions of bone and joint infection are increasingly drawn from electronic
 health record databases. A surgical series knows which specimen came from the infected bone; a
 database does not, because microbiology tables record a free-text laboratory workflow label rather
-than an anatomical site. We measured how far the resulting estimates depend on which labels are analysed.
+than an anatomical site. We measured how far the resulting estimates depend on the labels analysed.
 
-Specimen labels are split into two tiers, assigned before any outcome was examined:
+Specimen labels are split into two tiers:
 
 - **source-specific** — the label names a musculoskeletal structure or an orthopedic-implant procedure:
   `JOINT FLUID`, `PROSTHETIC JOINT FLUID`, and explicit sonication (from either the specimen label
@@ -106,7 +106,7 @@ or prosthesis named in the diagnosis code.
     ├── 10_analysis.py        statistics -> results_digest.json, stats_digest.json
     ├── 20_figures.py         Fig1-Fig3
     ├── 30_verify_refs.py     Crossref DOI verification of the reference list
-    ├── 40_supplement_tables.py   Tables 1-4 and eTables 1-13 -> tables.json
+    ├── 40_supplement_tables.py   Tables 1-4 and eTables 1-12 -> tables.json
     ├── manuscript_text.py    manuscript body text
     ├── paths.py              MIMIC_ROOT and PROJ_ROOT resolution
     ├── 50_build_docx.py      manuscript and Online Resource 1 (Word)

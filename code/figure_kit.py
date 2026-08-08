@@ -33,7 +33,7 @@ def save(fig, path_no_ext):
 
 def panel(ax, letter):
     """Lowercase bold panel label (a/b/c) at the top-left, Nature convention."""
-    ax.text(-0.14, 1.06, letter, transform=ax.transAxes, fontsize=14, fontweight="bold", color=LABEL)
+    ax.text(-0.14, 1.06, letter, transform=ax.transAxes, fontsize=11, fontweight="bold", color=LABEL)
 
 
 def faint_grid(ax, axis="y"):
