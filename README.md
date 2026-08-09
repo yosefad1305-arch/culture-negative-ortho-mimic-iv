@@ -1,11 +1,20 @@
 [![DOI](https://zenodo.org/badge/1294114170.svg)](https://doi.org/10.5281/zenodo.21268251)
 
-# Specimen-label cohorts and culture estimates in orthopedic infection (MIMIC-IV)
+# Specimen-label cohorts and culture estimates in code-defined bone and joint infection: a MIMIC-IV measurement study
 
-Code to reproduce every number, table and figure in:
+Adiniaev Y, Gorenshtein A, Timor TM, Klang E, Geftler A. Faculty of Medicine, University of
+Debrecen, Debrecen, Hungary; Beth Israel Deaconess Medical Center, Boston, MA, USA; Department of
+Orthopedic Surgery, Soroka Medical Center, Beer Sheva, Israel.
 
-> Adiniaev Y, Gorenshtein A, Timor TM, Klang E, Geftler A. Specimen-label cohorts and culture
-> estimates in code-defined bone and joint infection: a MIMIC-IV measurement study. Under review.
+**Background/Objective:** Culture-based descriptions of bone and joint infection are increasingly
+drawn from electronic health record databases, in which specimens carry free-text laboratory labels
+rather than anatomical sites. We measured how far such estimates depend on the labels analysed.
+
+**Conclusions:** Culture estimates differ substantially between specimen-label-defined cohorts,
+while within episodes no per-specimen association with the label was detected. Such studies should
+report the label set, the deduplication scope and the low-resolution-growth rule.
+
+This repository reproduces every number, table and figure in the manuscript.
 
 ## What this study asks
 
@@ -193,6 +202,25 @@ Cohort, specimen taxonomy, organism dictionary, result-status rules and all meas
 documented in the paper's Methods and Online Resource 1. The dictionaries are code
 (`org_map.py`, `spec_map.py`, `result_map.py`) and are the authoritative version of what appears in
 the eTables.
+
+## Citation
+
+If you use this code, please cite the paper and the archived release:
+
+> Adiniaev Y, Gorenshtein A, Timor TM, Klang E, Geftler A. Specimen-label cohorts and culture
+> estimates in code-defined bone and joint infection: a MIMIC-IV measurement study. 2026.
+
+> Analysis code archived at https://doi.org/10.5281/zenodo.21268251 (concept DOI, resolves to the
+> latest release).
+
+## Data protection
+
+No patient-level data are included here, and none can be produced into this repository: the
+pipeline writes only aggregate JSON digests, and `.gitignore` blocks every tabular format. No
+row-level extract of MIMIC-IV, including specimen identifiers or verbatim laboratory comment text,
+is reproduced in the code, the outputs or the manuscript supplement. MIMIC-IV may be redistributed
+only through PhysioNet under its data use agreement. No local file-system paths remain in the
+code; locations resolve from `MIMIC_ROOT` and `PROJ_ROOT`.
 
 ## License
 

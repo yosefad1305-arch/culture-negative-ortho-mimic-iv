@@ -7,6 +7,7 @@ cannot drift between the analysis and the prose.
 """
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -242,8 +243,7 @@ claim("43.3% of 367 first isolates per patient")
 claim("S. aureus at 29.0% of 4547 episode-first")
 est("saureus_share_strict_epfirst", 45.3)
 ci("saureus_share_strict_epfirst")
-claim("175 of 395 episode-first source-specific "
-      "isolates (43.2%)")
+# Superseded by the numeric first_isolate_scope guard below, which reads the digest.
 
 # ---- resistance
 est("mrsa::pooled|all_isolates", 43.2)
@@ -407,6 +407,46 @@ checks += 1
 for _banned_word in ["validation_sample", "audit sample of classified specimens"]:
     if _banned_word.lower() in FULL.lower():
         fails.append(f"manuscript references a published row-level sample: {_banned_word!r}")
+
+
+# ---- every reference must be cited, and every citation must exist
+checks += 1
+_cited = set()
+for _grp in re.findall(r"\[([0-9,\-\s]+)\]", FULL):
+    for _part in _grp.split(","):
+        _part = _part.strip()
+        if "-" in _part:
+            _a, _b = _part.split("-")
+            _cited.update(range(int(_a), int(_b) + 1))
+        elif _part.isdigit():
+            _cited.add(int(_part))
+_uncited = [n for n in range(1, len(M.REFERENCES) + 1) if n not in _cited]
+if _uncited:
+    fails.append(f"references in the list but never cited: {_uncited}")
+checks += 1
+_dangling = [n for n in sorted(_cited) if n > len(M.REFERENCES)]
+if _dangling:
+    fails.append(f"citations with no matching reference: {_dangling}")
+
+# ---- every "k of n (p%)" triple in the prose must be arithmetically consistent
+checks += 1
+for _k, _n, _pct in re.findall(r"([\d,]+) of ([\d,]+)[^.()]*?\(([\d.]+)%\)", FULL):
+    _ki, _ni, _pf = int(_k.replace(",", "")), int(_n.replace(",", "")), float(_pct)
+    if _ni and abs(100 * _ki / _ni - _pf) > 0.06:
+        fails.append(f"arithmetic: {_ki} of {_ni} is {100*_ki/_ni:.1f}%, text says {_pf}%")
+
+# ---- deduplication-scope numbers must match the digest
+_fi = D.get("first_isolate_scope")
+checks += 1
+if not _fi:
+    fails.append("first_isolate_scope missing from the digest")
+else:
+    claim(f"{_fi['episode_first_lost_if_global']} of {_fi['episode_first']} episode-first "
+          "source-specific")
+    checks += 1
+    _r = _fi["episode_first_lost_if_global"] / _fi["episode_first"]
+    if f"({_r*100:.1f}%)" not in FULL:
+        fails.append(f"deduplication-scope percentage {_r*100:.1f}% not found in the manuscript")
 
 print(f"{checks} checks run")
 if fails:

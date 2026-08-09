@@ -199,7 +199,7 @@ p(f"ICU-linked: {ep.icu_linked.mean():.1%}")
 
 # ------------------------------------------------------------------ specimen accounting
 p("\n" + "=" * 90)
-p("SPECIMEN ACCOUNTING (reviewer item 2: what enters the no-growth denominator)")
+p("SPECIMEN ACCOUNTING: what enters the no-growth denominator")
 p("=" * 90)
 acct = {}
 for name, sel in [("strict", spec.is_deep_strict), ("generic", spec.is_deep_generic),
@@ -523,6 +523,24 @@ for rule in ["all_isolates", "first_isolate_episode", "first_isolate_patient"]:
           ", ".join(f"{k} {v:.1%}" for k, v in top))
 D["spectrum"] = spectrum
 
+# Impact of scoping the first-isolate rule within the tier rather than across all cultures.
+# Reported in the manuscript, so it is stored here and checked by 99_audit.py rather than being
+# transcribed from a console line.
+_s = org[org.is_deep_strict]
+D["first_isolate_scope"] = dict(
+    episode_first=int(_s.first_isolate_episode_strict.sum()),
+    patient_first=int(_s.first_isolate_patient_strict.sum()),
+    episode_first_lost_if_global=int(
+        (_s.first_isolate_episode_strict & ~_s.first_isolate_episode_all).sum()),
+    patient_first_lost_if_global=int(
+        (_s.first_isolate_patient_strict & ~_s.first_isolate_patient_all).sum()),
+    note="denominators are ALL first isolates in the tier, including low-resolution growth; "
+         "the spectrum table uses the smaller speciated-only count")
+_fi = D["first_isolate_scope"]
+p(f"  first-isolate scope: {_fi['episode_first_lost_if_global']:,}/{_fi['episode_first']:,} "
+  f"({_fi['episode_first_lost_if_global'] / _fi['episode_first']:.1%}) episode-first strict "
+  f"isolates would be discarded by a globally scoped rule")
+
 # S. aureus share with clustered CI, strict tier, episode-first isolates
 sa_d = org[org.is_deep_strict & org.first_isolate_episode_strict & org.is_species].copy()
 sa_d["is_sa"] = sa_d.is_saureus
@@ -531,7 +549,7 @@ p("  " + fmt(D["saureus_share_strict_epfirst"]))
 
 # ------------------------------------------------------------------ polymicrobial (both rules)
 p("\n" + "=" * 90)
-p("POLYMICROBIAL (reviewer item 4: raw vs normalized organism identity)")
+p("POLYMICROBIAL: raw vs normalized organism identity")
 p("=" * 90)
 p("Speciated-only rules exclude low-resolution growth, so a specimen reported as mixed bacterial "
   "flora contributes no organisms and is scored monomicrobial. Three prespecified rules are "
@@ -615,7 +633,7 @@ D["mrsa"] = mrsa
 
 # ------------------------------------------------------------------ era stratification
 p("\n" + "=" * 90)
-p("ERA STRATIFICATION (anchor_year_group; reviewer item 7)")
+p("ERA STRATIFICATION (anchor_year_group)")
 p("=" * 90)
 p("MIMIC-IV chartdates are per-patient date-shifted and carry no calendar meaning; "
   "anchor_year_group is the only admissible era marker.")

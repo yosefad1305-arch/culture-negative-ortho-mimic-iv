@@ -175,9 +175,12 @@ METHODS = [
     ("Microbiological methods and susceptibility interpretation",
      ["MIMIC-IV records the result of routine clinical microbiology testing as reported by the "
       "hospital laboratory. It does not record culture media, incubation atmosphere or duration, "
-      "whether periprosthetic tissue was inoculated into blood culture bottles, or whether "
-      "explanted hardware underwent sonication under a defined protocol; specimens labelled as "
-      "sonicate were taken at face value. Prolonged incubation for indolent organisms such as "
+      "whether periprosthetic tissue was inoculated into blood culture bottles [13], or whether "
+      "explanted hardware underwent sonication under a defined protocol [14]; specimens labelled "
+      "as sonicate were taken at face value. It likewise does not record how many independent "
+      "periprosthetic specimens were submitted per procedure, which underpins the conventional "
+      "microbiological criterion for prosthetic joint infection [15]. Prolonged incubation for "
+      "indolent organisms such as "
       "Cutibacterium, which requires at least 13 days for reliable recovery [7], cannot be "
       "verified. Nucleic acid amplification and 16S rRNA results are not captured, so a specimen "
       "negative by culture but positive by a molecular assay is counted here as no growth.",
@@ -285,7 +288,7 @@ RESULTS = [
     ("Deduplication scope and low-resolution growth",
      ["Scoping the first-isolate rule "
       "within the tier being analysed, rather than across every culture in the admission, changed "
-      "the source-specific isolate count by 43%: 175 of 395 episode-first source-specific "
+      "the source-specific isolate count by 43%: 175 of 405 episode-first source-specific "
       "isolates (43.2%) had been preceded by the same organism on a blood, urine, swab or generic "
       "specimen and would have been discarded by a globally scoped rule, though they are the first "
       "recovery among source-specific specimens.",
@@ -329,7 +332,7 @@ RESULTS = [
       "the number of specimens obtained (adjusted P = .009). No sociodemographic coefficient "
       "remained statistically significant after correction, including sex (odds ratio for male "
       "sex, 0.80; 0.58-1.12; P = .19). Complete coefficients, reference categories, denominators, "
-      "event counts, and raw and adjusted P values are given in Online Resource 1, eTable 11.",
+      "event counts, and raw and adjusted P values are given in Online Resource 1, eTable 10.",
       "Only 167 osteomyelitis episodes contributed a source-specific specimen."]),
 ]
 

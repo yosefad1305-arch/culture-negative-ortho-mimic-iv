@@ -5,7 +5,7 @@ and a Zotero-importable BibTeX file is emitted. Crossref artifacts (ALL-CAPS, <s
 """
 import urllib.request, urllib.parse, json, re, os, html
 from paths import OUT
-UA={"User-Agent":"ortho-mimic-study/1.0 (mailto:local@local)"}
+UA = {"User-Agent": "specimen-label-cohorts-mimic-iv/2.0 (mailto:yosefad1305@gmail.com)"}
 
 # (key, query, expected first-author surname, expected year) — queries are bibliographic strings
 REFS=[
